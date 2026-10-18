@@ -15,12 +15,17 @@
     
 <a-assets>
     <img id="minion" src="images/minion.png">
+    <img id="mickey" src="images/mickey.png">
   </a-assets>
 
 <a-camera position="0 0 0" look-controls="enabled: false"></a-camera> 
 
 <a-entity mindar-image-target="targetIndex: 0"> 
-    <a-image position="0 1 0" rotation="0 0 0" scale="2 2 2" src="#minion"></a-image> 
+    <a-image position="0 0 0" rotation="0 0 0" scale="1 1 1" src="#minion"></a-image> 
+</a-entity> 
+
+<a-entity mindar-image-target="targetIndex: 1"> 
+    <a-image position="0 0 0" rotation="0 0 0" scale="1 1 1" src="#mickey"></a-image> 
 </a-entity> 
 </a-scene> 
 </body> 
