@@ -5,30 +5,20 @@
         <title>Mi Primer WebAR con MindAR</title> 
         <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
          <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-         <script>
-      // Componente personalizado para controlar el video de cada marcador
+           <script>
       AFRAME.registerComponent('controlador-video', {
-        schema: {
-          idVideo: { type: 'string' }
-        },
         init: function () {
           var el = this.el;
-          var video = document.querySelector(this.data.idVideo);
+          var video = document.querySelector("#VideoUniversal");
 
-          // Detectar cuando el marcador es visible
+          // Reproducir al detectar el marcador
           el.addEventListener('markerFound', function () {
-            if (video) {
-              video.play().catch(function(error) {
-                console.log("Interacción requerida para reproducir el video:", error);
-              });
-            }
+            video.play();
           });
 
-          // Detectar cuando el marcador se pierde de vista
+          // Pausar si se pierde el marcador (opcional)
           el.addEventListener('markerLost', function () {
-            if (video) {
-              video.pause();
-            }
+            video.pause();
           });
         }
       });
@@ -66,7 +56,7 @@
     <a-video src="#VideoUniversal" width="1.6" height="0.9" rotation="0 0 0" position="0 0 0"></a-video> 
 </a-entity> 
 
-<a-entity controlador-video
+<a-entity 
     mindar-image-target="targetIndex: 1"
     smooth="true" 
     smoothCount="10" 
