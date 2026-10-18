@@ -11,7 +11,14 @@
 <a-scene mindar-image="imageTargetSrc: ./targets/targets.mind;" 
     color-space="sRGB" renderer="colorManagement: true, 
     physicallyCorrectLights" vr-mode-ui="enabled: false" 
-    device-orientation-permission-ui="enabled: false"> 
+    device-orientation-permission-ui="enabled: false"
+    detectionMode: mono_and_matrix 
+    matrixCodeType: 3x3 
+    trackingMethod: best 
+    maxDetectionRate: 60
+    > 
+
+    
     
 <a-assets>
     <img id="minion" src="images/minion.png">
