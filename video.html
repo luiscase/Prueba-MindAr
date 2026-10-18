@@ -16,7 +16,7 @@
           var video = document.querySelector(this.data.idVideo);
 
           // Detectar cuando el marcador es visible
-          el.addEventListener('entityFound', function () {
+          el.addEventListener('markerFound', function () {
             if (video) {
               video.play().catch(function(error) {
                 console.log("Interacción requerida para reproducir el video:", error);
@@ -25,7 +25,7 @@
           });
 
           // Detectar cuando el marcador se pierde de vista
-          el.addEventListener('entityLost', function () {
+          el.addEventListener('markerLost', function () {
             if (video) {
               video.pause();
             }
