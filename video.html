@@ -5,24 +5,30 @@
         <title>Mi Primer WebAR con MindAR</title> 
         <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
          <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-           <script>
-      AFRAME.registerComponent('controlador-video', {
-        init: function () {
-          var el = this.el;
-          var video = document.querySelector("#VideoUniversal");
 
-          // Reproducir al detectar el marcador
-          el.addEventListener('markerFound', function () {
-            video.play();
-          });
+<!--Reproducir video al encontrar marcador-->
+         <script>
+    AFRAME.registerComponent('video-tracker', {
+      init: function () {
+        const marker = this.el;
+        const video = document.querySelector('#miVideo');
 
-          // Pausar si se pierde el marcador (opcional)
-          el.addEventListener('markerLost', function () {
-            video.pause();
+        video.pause();
+
+        marker.addEventListener('markerFound', () => {
+          video.play().catch(error => {
+            console.log('No se pudo reproducir el video:', error);
           });
-        }
-      });
-    </script>
+        });
+
+        marker.addEventListener('markerLost', () => {
+          video.pause();
+        });
+      }
+    });
+  </script>
+
+           
     </head> 
     <body> 
 
@@ -41,19 +47,20 @@
 <a-assets>
     <img id="minion" src="images/minion.png">
     <img id="mickey" src="images/mickey.png">
-    <video id="VideoUniversal" src="videos/UniversalTrip10mb.mp4" preload="auto" loop="true" playsinline webkit-playsinline></video>
+    <video id="miVideo" src="videos/UniversalTrip10mb.mp4" preload="auto" loop="true" playsinline webkit-playsinline></video>
     <video id="VideoDisney" src="videos/DisneyTrip10mb.mp4" preload="auto" loop="true" playsinline webkit-playsinline></video>
   </a-assets>
 
 <a-camera position="0 0 0" look-controls="enabled: false"></a-camera> 
 
-<a-entity controlador-video
+<a-entity 
     mindar-image-target="targetIndex: 0" 
+    video-tracker
     smooth="true" 
     smoothCount="10" 
     smoothTolerance="0.01" 
     smoothThreshold="5"> 
-    <a-video src="#VideoUniversal" width="1.6" height="0.9" rotation="0 0 0" position="0 0 0"></a-video> 
+    <a-video src="#miVideo" width="1.6" height="0.9" rotation="0 0 0" position="0 0 0"></a-video> 
 </a-entity> 
 
 <a-entity 
