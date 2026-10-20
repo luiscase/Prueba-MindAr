@@ -6,10 +6,12 @@
         <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
          <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
+<!--Detectar Marcador1 y reproducir video-->
+
 <script>
 AFRAME.registerComponent('video-controller', {
   init: function () {
-    let videoEl = document.querySelector('#VideoId');
+    const videoEl = document.querySelector('#VideoUniversal');
 
     this.el.addEventListener('targetFound', event => {
       console.log('Target found - playing video');
@@ -19,6 +21,26 @@ AFRAME.registerComponent('video-controller', {
     this.el.addEventListener('targetLost', event => {
       console.log('Target lost - pausing video');
       videoEl.pause();
+    });
+  }
+});
+</script>
+
+<!--Detectar Marcador2 y reproducir video-->
+
+<script>
+AFRAME.registerComponent('video-controller2', {
+  init: function () {
+    const videoE2 = document.querySelector('#VideoDisney');
+
+    this.el.addEventListener('targetFound', event => {
+      console.log('Target found - playing video');
+      videoE2.play();
+    });
+
+    this.el.addEventListener('targetLost', event => {
+      console.log('Target lost - pausing video');
+      videoE2.pause();
     });
   }
 });
@@ -52,7 +74,6 @@ AFRAME.registerComponent('video-controller', {
 <a-camera position="0 0 0" look-controls="enabled: false"></a-camera> 
 
 <a-entity video-controller
-    videoId="#VideoUniversal"
     mindar-image-target="targetIndex: 0" 
     smooth="true" 
     smoothCount="10" 
@@ -62,7 +83,6 @@ AFRAME.registerComponent('video-controller', {
 </a-entity> 
 
 <a-entity video-controller
-    videoId="#VideoDisney"
     mindar-image-target="targetIndex: 1"
     smooth="true" 
     smoothCount="10" 
