@@ -48,10 +48,68 @@ AFRAME.registerComponent('video-controller2', {
 </script>
 
 
+<style>
+        /* Estilos para la ventana de inicio */
+        #splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(18, 18, 18, 0.95); /* Fondo oscuro */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999; /* Asegura que esté por encima de la escena 3D */
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: opacity 0.5s ease; /* Efecto de desaparición suave */
+        }
+
+        .splash-content {
+            text-align: center;
+            padding: 20px;
+        }
+
+        #start-button {
+            background-color: #ff4757;
+            color: white;
+            border: none;
+            padding: 15px 35px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4);
+            transition: transform 0.2s, background-color 0.2s;
+        }
+
+        #start-button:hover {
+            background-color: #ff6b81;
+            transform: scale(1.05);
+        }
+
+        /* Ocultar la interfaz nativa de A-Frame temporalmente si es necesario */
+        .a-enter-vr {
+            display: none !important;
+        }
+    </style>
 
            
     </head> 
     <body> 
+
+
+    <!-- 1. VENTANA DE INICIO (SPLASH WINDOW) -->
+    <div id="splash-screen">
+        <div class="splash-content">
+            <h1>Bienvenido a la Experiencia AR</h1>
+            <p>Por favor, permite el acceso a la cámara cuando se te solicite.</p>
+            <button id="start-button">ENTRAR</button>
+        </div>
+    </div>
+
 
 <a-scene mindar-image="imageTargetSrc: ./targets/targets.mind;" 
     color-space="sRGB" renderer="colorManagement: true, 
@@ -92,5 +150,34 @@ AFRAME.registerComponent('video-controller2', {
     <a-video src="#VideoDisney" width="1.6" height="0.9" rotation="0 0 0" position="0 0 0"></a-video> 
 </a-entity> 
 </a-scene> 
+
+<!-- 3. JAVASCRIPT PARA CONTROLAR LA INTERFAZ -->
+    <script>
+        const splash = document.getElementById('splash-screen');
+        const startButton = document.getElementById('start-button');
+        const scene = document.querySelector('a-scene');
+
+        // Pausar la escena al cargar la página para ahorrar recursos antes del click
+        scene.pause();
+
+        startButton.addEventListener('click', () => {
+            // 1. Reanudar la escena de A-Frame (activa cámara/sensores)
+            scene.play();
+
+            // 2. Desvanecer la pantalla de inicio
+            splash.style.opacity = 0;
+
+            // 3. Eliminar por completo el div del DOM después de la animación para que no interfiera con los clicks en AR
+            setTimeout(() => {
+                splash.remove();
+                
+                // Volver a mostrar el botón nativo de entrar a VR/AR si lo necesitas
+                const vrButton = document.querySelector('.a-enter-vr');
+                if (vrButton) vrButton.style.display = 'block';
+            }, 500); 
+        });
+    </script>
+
+
 </body> 
 </html>
