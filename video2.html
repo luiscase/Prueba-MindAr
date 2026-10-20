@@ -126,6 +126,9 @@ AFRAME.registerComponent('video-controller2', {
 <a-assets>
     <img id="minion" src="images/minion.png">
     <img id="mickey" src="images/mickey.png">
+    <img id="dedo_arriba" src="images/dedo-arriba.png">
+    <img id="dedos_abajo" src="images/dedos-abajo.png">
+    <img id="sombra" src="images/sombra-16_9.png">
     <video id="VideoUniversal" src="videos/UniversalTrip10mb.mp4" preload="auto" loop="true" playsinline webkit-playsinline></video>
     <video id="VideoDisney" src="videos/DisneyTrip10mb.mp4" preload="auto" loop="true" playsinline webkit-playsinline></video>
   </a-assets>
@@ -138,7 +141,7 @@ AFRAME.registerComponent('video-controller2', {
     smoothCount="10" 
     smoothTolerance="0.01" 
     smoothThreshold="5"> 
-    <a-video src="#VideoUniversal" width="1.6" height="0.9" rotation="0 0 0" position="0 0 0"></a-video> 
+    <a-video src="#VideoUniversal" width="1.6" height="0.9" rotation="0 0 0" position="0 0 0.2"></a-video> 
 </a-entity> 
 
 <a-entity video-controller2
@@ -147,7 +150,11 @@ AFRAME.registerComponent('video-controller2', {
     smoothCount="10" 
     smoothTolerance="0.01" 
     smoothThreshold="5"> 
-    <a-video src="#VideoDisney" width="1.6" height="0.9" rotation="0 0 0" position="0 0 0"></a-video> 
+    <a-video src="#VideoDisney" width="1.6" height="0.9" rotation="0 0 0" position="0 0 0.2"></a-video> 
+    <a-image src="#mickey" position="0 0 0" rotation="0 0 0" scale="1 1 1"></a-image>
+    <a-image src="#dedo_arriba" position="0 0 0" rotation="0 0 0" scale="1 1 1"></a-image>
+    <a-image src="#dedos_abajo" position="0 0 0" rotation="0 0 0" scale="1 1 1"></a-image>
+    <a-image src="#sombra" position="0 0 0" rotation="0 0 0" scale="1 1 1"></a-image>
 </a-entity> 
 </a-scene> 
 
