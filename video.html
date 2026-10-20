@@ -6,27 +6,24 @@
         <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
          <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
-<!--Reproducir video al encontrar marcador-->
-         <script>
-    AFRAME.registerComponent('video-tracker', {
-      init: function () {
-        const marker = this.el;
-        const video = document.querySelector('#miVideo');
 
-        video.pause();
+<script>
+AFRAME.registerComponent('video-controller', {
+  init: function () {
+    const videoEl = document.querySelector('#VideoUniversal');
 
-        marker.addEventListener('markerFound', () => {
-          video.play().catch(error => {
-            console.log('No se pudo reproducir el video:', error);
-          });
-        });
-
-        marker.addEventListener('markerLost', () => {
-          video.pause();
-        });
-      }
+    this.el.addEventListener('targetFound', event => {
+      console.log('Target found - playing video');
+      videoEl.play();
     });
-  </script>
+
+    this.el.addEventListener('targetLost', event => {
+      console.log('Target lost - pausing video');
+      videoEl.pause();
+    });
+  }
+});
+</script>
 
            
     </head> 
@@ -47,20 +44,19 @@
 <a-assets>
     <img id="minion" src="images/minion.png">
     <img id="mickey" src="images/mickey.png">
-    <video id="miVideo" src="videos/UniversalTrip10mb.mp4" preload="auto" loop="true" playsinline webkit-playsinline></video>
+    <video id="VideoUniversal" src="videos/UniversalTrip10mb.mp4" preload="auto" loop="true" playsinline webkit-playsinline></video>
     <video id="VideoDisney" src="videos/DisneyTrip10mb.mp4" preload="auto" loop="true" playsinline webkit-playsinline></video>
   </a-assets>
 
 <a-camera position="0 0 0" look-controls="enabled: false"></a-camera> 
 
-<a-entity 
+<a-entity video-controller
     mindar-image-target="targetIndex: 0" 
-    video-tracker
     smooth="true" 
     smoothCount="10" 
     smoothTolerance="0.01" 
     smoothThreshold="5"> 
-    <a-video src="#miVideo" width="1.6" height="0.9" rotation="0 0 0" position="0 0 0"></a-video> 
+    <a-video src="#VideoUniversal" width="1.6" height="0.9" rotation="0 0 0" position="0 0 0"></a-video> 
 </a-entity> 
 
 <a-entity 
