@@ -125,11 +125,13 @@
             right: max(20px, env(safe-area-inset-right));
         }
 
-        /* Bocina: centrada, 50px desde abajo */
+        /* Bocina: abajo de boton fullscreen */
         #audio-button {
-            left: 50%;
-            bottom: calc(50px + env(safe-area-inset-bottom));
-            transform: translateX(-50%);
+    		top: max(78px, calc(env(safe-area-inset-top) + 58px));
+    		right: max(20px, env(safe-area-inset-right));
+    		left: auto;
+   		 bottom: auto;
+   		 transform: none;
         }
 
         #icon-sound-off,
