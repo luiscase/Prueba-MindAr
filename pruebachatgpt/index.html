@@ -1,866 +1,494 @@
 
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
-  <meta charset="UTF-8">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Experiencia WebAR</title>
 
-  <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- A-Frame y MindAR -->
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
-  <title>Experiencia WebAR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
 
-  <!-- A-Frame -->
-  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+            font-family: Arial, sans-serif;
+        }
 
-  <!-- MindAR -->
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+        /* Escena AR */
+        a-scene {
+            position: fixed !important;
+            inset: 0;
+            width: 100vw !important;
+            height: 100vh !important;
+            height: 100dvh !important;
+            z-index: 1;
+        }
 
-  <style>
+        .a-enter-vr,
+        .a-enter-ar {
+            display: none !important;
+        }
 
-    * {
-      box-sizing: border-box;
-    }
+        /* Pantalla inicial */
+        #splash-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+            color: white;
+            text-align: center;
+            transition: opacity 0.5s ease;
+        }
 
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: #000;
-      font-family: Arial, sans-serif;
-      touch-action: manipulation;
-    }
+        #start-button {
+            padding: 15px 30px;
+            border: 0;
+            border-radius: 30px;
+            background: white;
+            color: black;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
 
-    /* PANTALLA INICIAL */
+        /* Controles */
+        #controls {
+            position: fixed;
+            z-index: 20;
+            right: max(20px, env(safe-area-inset-right));
+            bottom: max(20px, env(safe-area-inset-bottom));
+            display: none;
+            gap: 12px;
+        }
 
-    #splash-screen {
-      position: fixed;
-      inset: 0;
-      z-index: 1000;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      background: #111;
-      color: white;
-      text-align: center;
-      padding: 25px;
-      transition: opacity .5s ease;
-    }
+        .control-button {
+            width: 48px;
+            height: 48px;
+            border: 0;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.65);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
 
-    #start-button {
-      border: none;
-      border-radius: 30px;
-      padding: 16px 35px;
-      margin-top: 25px;
-      background: white;
-      color: #111;
-      font-size: 17px;
-      font-weight: bold;
-      cursor: pointer;
-    }
+        .control-button svg {
+            width: 23px;
+            height: 23px;
+            fill: none;
+            stroke: white;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
 
-    /* MENSAJE DE ESCANEO */
-
-    #scan-message {
-      position: fixed;
-      top: 8%;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 10;
-      color: white;
-      background: rgba(0,0,0,.55);
-      padding: 12px 20px;
-      border-radius: 25px;
-      font-size: 14px;
-      text-align: center;
-      pointer-events: none;
-    }
-
-    /* BOTON DE AUDIO */
-
-    #audio-button {
-      position: fixed;
-      display: none;
-      bottom: 35px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 100;
-      width: 58px;
-      height: 58px;
-      border: 2px solid white;
-      border-radius: 50%;
-      background: rgba(0,0,0,.75);
-      color: white;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    #audio-button svg {
-      width: 28px;
-      height: 28px;
-      fill: none;
-      stroke: white;
-      stroke-width: 2;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-    }
-
-    #audio-button:active {
-      transform: translateX(-50%) scale(.92);
-    }
-
-    /* BOTON PANTALLA COMPLETA */
-
-    #fullscreen-button {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 200;
-      width: 45px;
-      height: 45px;
-      border: 1px solid white;
-      border-radius: 50%;
-      background: rgba(0,0,0,.65);
-      color: white;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    #fullscreen-button svg {
-      width: 23px;
-      height: 23px;
-      fill: none;
-      stroke: white;
-      stroke-width: 2;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-    }
-
-    #fullscreen-button:active {
-      transform: scale(.92);
-    }
-
-    /* OCULTAR INTERFAZ VR */
-
-    .a-enter-vr,
-    .a-enter-ar {
-      display: none !important;
-    }
-
-    /* ESCENA AR */
-
-    a-scene {
-      position: fixed;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-    }
-
-  </style>
-
+        /* Iconos */
+        #icon-sound-off,
+        #icon-minimize {
+            display: none;
+        }
+    </style>
 </head>
 
 <body>
 
-  <!-- PANTALLA DE INICIO -->
+    <!-- Pantalla de inicio -->
+    <div id="splash-screen">
+        <button id="start-button">INICIAR EXPERIENCIA AR</button>
+    </div>
+
+    <!-- Escena AR -->
+    <a-scene
+        mindar-image="
+            imageTargetSrc: ./targets.mind;
+            autoStart: false;
+            maxTrack: 1;
+            filterMinCF: 0.0005;
+            filterBeta: 1000;
+            warmupTolerance: 5;
+            missTolerance: 5;
+        "
+        color-space="sRGB"
+        renderer="colorManagement: true; physicallyCorrectLights: true"
+        vr-mode-ui="enabled: false"
+        device-orientation-permission-ui="enabled: false"
+        embedded
+    >
+
+        <a-assets>
+            <video
+                id="video"
+                src="./video.mp4"
+                preload="auto"
+                loop
+                muted
+                playsinline
+                webkit-playsinline
+                crossorigin="anonymous"
+            ></video>
+        </a-assets>
+
+        <a-camera
+            id="camera"
+            position="0 0 0"
+            look-controls="enabled: false"
+        ></a-camera>
+
+        <!-- Marcador -->
+        <a-entity id="target" mindar-image-target="targetIndex: 0">
+
+            <!-- Video 16:9 -->
+            <a-video
+                id="video-plane"
+                src="#video"
+                width="1"
+                height="0.5625"
+                position="0 0 0.01"
+            ></a-video>
+
+        </a-entity>
+
+    </a-scene>
+
+    <!-- Controles inferiores -->
+    <div id="controls">
+
+        <!-- Audio -->
+        <button class="control-button" id="audio-button" aria-label="Activar o desactivar audio">
+
+            <svg id="icon-sound-off" viewBox="0 0 24 24">
+                <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+                <line x1="23" y1="9" x2="17" y2="15"></line>
+                <line x1="17" y1="9" x2="23" y2="15"></line>
+            </svg>
+
+            <svg id="icon-sound-on" viewBox="0 0 24 24">
+                <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+                <path d="M15.5 8.5a5 5 0 0 1 0 7"></path>
+                <path d="M19 5a10 10 0 0 1 0 14"></path>
+            </svg>
+
+        </button>
+
+        <!-- Pantalla completa -->
+        <button class="control-button" id="fullscreen-button" aria-label="Pantalla completa">
+
+            <svg id="icon-maximize" viewBox="0 0 24 24">
+                <polyline points="8 3 3 3 3 8"></polyline>
+                <polyline points="16 3 21 3 21 8"></polyline>
+                <polyline points="3 16 3 21 8 21"></polyline>
+                <polyline points="21 16 21 21 16 21"></polyline>
+            </svg>
+
+            <svg id="icon-minimize" viewBox="0 0 24 24">
+                <polyline points="8 3 8 8 3 8"></polyline>
+                <polyline points="16 3 16 8 21 8"></polyline>
+                <polyline points="3 16 8 16 8 21"></polyline>
+                <polyline points="21 16 16 16 16 21"></polyline>
+            </svg>
+
+        </button>
+
+    </div>
+
+    <script>
+        const scene = document.querySelector("a-scene");
+        const startButton = document.getElementById("start-button");
+        const splash = document.getElementById("splash-screen");
 
-  <div id="splash-screen">
+        const video = document.getElementById("video");
+        const target = document.getElementById("target");
+        const videoPlane = document.getElementById("video-plane");
+        const camera = document.getElementById("camera");
 
-    <h2>Experiencia de Realidad Aumentada</h2>
+        const controls = document.getElementById("controls");
+        const audioButton = document.getElementById("audio-button");
+        const fullscreenButton = document.getElementById("fullscreen-button");
 
-    <p>Presiona el botón para activar la cámara.</p>
+        const iconSoundOn = document.getElementById("icon-sound-on");
+        const iconSoundOff = document.getElementById("icon-sound-off");
 
-    <button id="start-button">
-      INICIAR EXPERIENCIA
-    </button>
+        const iconMaximize = document.getElementById("icon-maximize");
+        const iconMinimize = document.getElementById("icon-minimize");
 
-  </div>
+        let experienceStarted = false;
+        let targetVisible = false;
+        let resizeTimeout = null;
 
+        // Estado inicial del video
+        video.muted = true;
+        video.pause();
 
-  <!-- MENSAJE DE ESCANEO -->
+        // Ocultar escena antes de iniciar
+        scene.pause();
 
-  <div id="scan-message" style="display:none;">
+        // ----------------------------------
+        // INICIAR EXPERIENCIA AR
+        // ----------------------------------
 
-    Apunta tu cámara hacia la imagen
+        startButton.addEventListener("click", async () => {
 
-  </div>
+            if (experienceStarted) return;
 
+            try {
 
-  <!-- BOTON DE AUDIO -->
+                experienceStarted = true;
 
-  <button id="audio-button" aria-label="Activar sonido">
+                // Solicitar pantalla completa
+                if (document.documentElement.requestFullscreen) {
+                    try {
+                        await document.documentElement.requestFullscreen();
+                    } catch (error) {
+                        console.log("Pantalla completa no disponible:", error);
+                    }
+                }
 
-    <!-- BOCINA APAGADA -->
+                // Iniciar MindAR
+                await scene.systems["mindar-image-system"].start();
 
-    <svg id="icon-muted" viewBox="0 0 24 24">
+                // Mostrar controles
+                controls.style.display = "flex";
 
-      <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+                // Ocultar splash
+                splash.style.opacity = "0";
 
-      <line x1="23" y1="9" x2="17" y2="15"/>
+                setTimeout(() => {
+                    splash.style.display = "none";
+                }, 500);
 
-      <line x1="17" y1="9" x2="23" y2="15"/>
+                refreshARLayout();
 
-    </svg>
+            } catch (error) {
 
+                console.error("Error al iniciar AR:", error);
+                experienceStarted = false;
 
-    <!-- BOCINA ENCENDIDA -->
+                alert("No se pudo iniciar la cámara. Verifica los permisos del navegador.");
 
-    <svg id="icon-sound"
-         viewBox="0 0 24 24"
-         style="display:none;">
-
-      <path d="M11 5L6 9H2v6h4l5 4V5z"/>
-
-      <path d="M15.5 8.5a5 5 0 0 1 0 7"/>
-
-      <path d="M19 5a10 10 0 0 1 0 14"/>
-
-    </svg>
-
-  </button>
-
-
-  <!-- BOTON PANTALLA COMPLETA -->
-
-  <button id="fullscreen-button"
-          aria-label="Salir de pantalla completa">
-
-    <!-- ICONO EXPANDIR -->
-
-    <svg id="icon-expand" viewBox="0 0 24 24">
-
-      <path d="M8 3H5a2 2 0 0 0-2 2v3"/>
-
-      <path d="M16 3h3a2 2 0 0 1 2 2v3"/>
-
-      <path d="M3 16v3a2 2 0 0 0 2 2h3"/>
-
-      <path d="M21 16v3a2 2 0 0 1-2 2h-3"/>
-
-    </svg>
-
-
-    <!-- ICONO SALIR -->
-
-    <svg id="icon-compress"
-         viewBox="0 0 24 24"
-         style="display:none;">
-
-      <path d="M8 3v5H3"/>
-
-      <path d="M16 3v5h5"/>
-
-      <path d="M3 16h5v5"/>
-
-      <path d="M21 16h-5v5"/>
-
-    </svg>
-
-  </button>
-
-
-  <!-- ESCENA AR -->
-
-  <a-scene
-
-    mindar-image="
-      imageTargetSrc: ./targets.mind;
-      autoStart: false;
-      maxTrack: 1;
-      filterMinCF: 0.0005;
-      filterBeta: 1000;
-      warmupTolerance: 5;
-      missTolerance: 5;
-    "
-
-    color-space="sRGB"
-
-    renderer="
-      colorManagement: true;
-      physicallyCorrectLights: true;
-      precision: mediump;
-      antialias: true;
-      alpha: true;
-    "
-
-    vr-mode-ui="enabled: false"
-
-    device-orientation-permission-ui="enabled: false"
-
-    loading-screen="enabled: false"
-
-  >
-
-    <!-- VIDEO -->
-
-    <a-assets>
-
-      <video
-
-        id="arVideo"
-
-        src="./video.mp4"
-
-        preload="auto"
-
-        loop
-
-        muted
-
-        playsinline
-
-        webkit-playsinline
-
-        crossorigin="anonymous">
-
-      </video>
-
-    </a-assets>
-
-
-    <!-- CAMARA -->
-
-    <a-camera
-
-      id="arCamera"
-
-      position="0 0 0"
-
-      look-controls="enabled: false"
-
-      wasd-controls="enabled: false">
-
-    </a-camera>
-
-
-    <!-- IMAGEN OBJETIVO -->
-
-    <a-entity
-
-      id="imageTarget"
-
-      mindar-image-target="targetIndex: 0">
-
-
-      <!-- VIDEO ANCLADO A LA IMAGEN -->
-
-      <a-video
-
-        id="videoPlane"
-
-        class="video-clickable"
-
-        src="#arVideo"
-
-        position="0 0 0.01"
-
-        rotation="0 0 0"
-
-        width="1"
-
-        height="0.5625"
-
-        material="
-          shader: flat;
-          side: double;
-          transparent: false;
-        ">
-
-      </a-video>
-
-
-    </a-entity>
-
-  </a-scene>
-
-
-  <script>
-
-    // ==========================================
-    // ELEMENTOS
-    // ==========================================
-
-    const scene = document.querySelector("a-scene");
-
-    const target = document.querySelector("#imageTarget");
-
-    const video = document.querySelector("#arVideo");
-
-    const videoPlane = document.querySelector("#videoPlane");
-
-    const camera = document.querySelector("#arCamera");
-
-    const splash = document.querySelector("#splash-screen");
-
-    const startButton = document.querySelector("#start-button");
-
-    const scanMessage = document.querySelector("#scan-message");
-
-    const audioButton = document.querySelector("#audio-button");
-
-    const iconMuted = document.querySelector("#icon-muted");
-
-    const iconSound = document.querySelector("#icon-sound");
-
-    const fullscreenButton = document.querySelector("#fullscreen-button");
-
-    const iconExpand = document.querySelector("#icon-expand");
-
-    const iconCompress = document.querySelector("#icon-compress");
-
-
-    // ==========================================
-    // VARIABLES
-    // ==========================================
-
-    let targetVisible = false;
-
-    let audioEnabled = false;
-
-    let experienceStarted = false;
-
-
-    // ==========================================
-    // ESTADO INICIAL
-    // ==========================================
-
-    video.muted = true;
-
-    video.pause();
-
-
-    // ==========================================
-    // ACTUALIZAR ICONO DE AUDIO
-    // ==========================================
-
-    function updateAudioButton() {
-
-      iconMuted.style.display =
-        audioEnabled ? "none" : "block";
-
-      iconSound.style.display =
-        audioEnabled ? "block" : "none";
-
-      audioButton.setAttribute(
-        "aria-label",
-        audioEnabled
-          ? "Desactivar sonido"
-          : "Activar sonido"
-      );
-
-    }
-
-
-    // ==========================================
-    // ACTIVAR / DESACTIVAR AUDIO
-    // ==========================================
-
-    function toggleAudio() {
-
-      audioEnabled = !audioEnabled;
-
-      video.muted = !audioEnabled;
-
-      updateAudioButton();
-
-      if (targetVisible && video.paused) {
-
-        video.play().catch(error => {
-
-          console.log("Error al reproducir:", error);
+            }
 
         });
 
-      }
+        // ----------------------------------
+        // DETECCIÓN DEL MARCADOR
+        // ----------------------------------
 
-    }
+        target.addEventListener("targetFound", () => {
 
+            targetVisible = true;
 
-    // ==========================================
-    // BOTON DE AUDIO
-    // ==========================================
+            video.play().catch(error => {
+                console.log("No se pudo reproducir el video:", error);
+            });
 
-    audioButton.addEventListener("click", () => {
+        });
 
-      toggleAudio();
+        target.addEventListener("targetLost", () => {
 
-    });
+            targetVisible = false;
+            video.pause();
 
+        });
 
-    // ==========================================
-    // DETECTAR TOQUE SOBRE EL VIDEO
-    // ==========================================
+        // ----------------------------------
+        // CONTROL DE AUDIO
+        // ----------------------------------
 
-    // Se utiliza Raycaster de Three.js para detectar
-    // si el usuario toca realmente el plano del video.
-    // Funciona con mouse y pantallas táctiles.
+        function toggleAudio() {
 
-    const raycaster = new THREE.Raycaster();
+            video.muted = !video.muted;
 
-    const pointer = new THREE.Vector2();
-
-    const cameraObject = camera.object3D;
-
-    function handleVideoPointer(event) {
-
-      if (!targetVisible) return;
-
-      if (!videoPlane.object3D.visible) return;
-
-      // Evitar dobles activaciones por eventos secundarios
-      if (event.pointerType === "mouse" && event.button !== 0) {
-        return;
-      }
-
-      const canvas = scene.canvas;
-
-      if (!canvas) return;
-
-      const rect = canvas.getBoundingClientRect();
-
-      pointer.x =
-        ((event.clientX - rect.left) / rect.width) * 2 - 1;
-
-      pointer.y =
-        -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
-      // Actualizar matrices de posición
-      cameraObject.updateMatrixWorld(true);
-
-      videoPlane.object3D.updateMatrixWorld(true);
-
-      // Lanzar rayo desde la cámara
-      raycaster.setFromCamera(pointer, cameraObject);
-
-      // Detectar intersección con el video
-      const intersections = raycaster.intersectObject(
-        videoPlane.object3D,
-        true
-      );
-
-      if (intersections.length > 0) {
-
-        toggleAudio();
-
-      }
-
-    }
-
-
-    // Registrar evento de interacción
-    scene.addEventListener("loaded", () => {
-
-      const canvas = scene.canvas;
-
-      if (canvas) {
-
-        canvas.addEventListener(
-          "pointerup",
-          handleVideoPointer
-        );
-
-      }
-
-    });
-
-
-    // ==========================================
-    // ACTUALIZAR ICONO PANTALLA COMPLETA
-    // ==========================================
-
-    function updateFullscreenButton() {
-
-      const isFullscreen =
-        !!document.fullscreenElement;
-
-      iconExpand.style.display =
-        isFullscreen ? "none" : "block";
-
-      iconCompress.style.display =
-        isFullscreen ? "block" : "none";
-
-      fullscreenButton.setAttribute(
-        "aria-label",
-        isFullscreen
-          ? "Salir de pantalla completa"
-          : "Activar pantalla completa"
-      );
-
-    }
-
-
-    // ==========================================
-    // ENTRAR / SALIR PANTALLA COMPLETA
-    // ==========================================
-
-    async function toggleFullscreen() {
-
-      try {
-
-        if (!document.fullscreenElement) {
-
-          if (document.documentElement.requestFullscreen) {
-
-            await document.documentElement.requestFullscreen();
-
-          } else {
-
-            console.log(
-              "Este navegador no admite pantalla completa."
-            );
-
-          }
-
-        } else {
-
-          await document.exitFullscreen();
+            updateAudioIcon();
 
         }
 
-      } catch (error) {
+        function updateAudioIcon() {
 
-        console.log(
-          "Pantalla completa no disponible:",
-          error
-        );
-
-      }
-
-    }
-
-
-    // ==========================================
-    // BOTON PANTALLA COMPLETA
-    // ==========================================
-
-    fullscreenButton.addEventListener("click", () => {
-
-      toggleFullscreen();
-
-    });
-
-
-    // Detectar cambios de pantalla completa
-
-    document.addEventListener(
-      "fullscreenchange",
-      updateFullscreenButton
-    );
-
-
-    // ==========================================
-    // INICIAR EXPERIENCIA
-    // ==========================================
-
-    startButton.addEventListener("click", async () => {
-
-      if (experienceStarted) return;
-
-      experienceStarted = true;
-
-      startButton.disabled = true;
-
-      startButton.textContent = "INICIANDO...";
-
-
-      // Solicitar pantalla completa dentro
-      // de la interacción del usuario
-
-      const fullscreenPromise =
-        document.documentElement.requestFullscreen
-          ? document.documentElement.requestFullscreen().catch(() => {})
-          : Promise.resolve();
-
-
-      // Desbloquear video en móviles
-
-      video.muted = true;
-
-      try {
-
-        await video.play();
-
-        video.pause();
-
-        video.currentTime = 0;
-
-      } catch (error) {
-
-        console.log(
-          "El navegador reproducirá el video al detectar la imagen."
-        );
-
-      }
-
-
-      // Ocultar pantalla inicial
-
-      splash.style.opacity = "0";
-
-      setTimeout(() => {
-
-        splash.style.display = "none";
-
-      }, 500);
-
-
-      // Mostrar controles
-
-      fullscreenButton.style.display = "flex";
-
-      updateFullscreenButton();
-
-      scanMessage.style.display = "block";
-
-
-      // Esperar la solicitud de pantalla completa
-
-      await fullscreenPromise;
-
-
-      // Iniciar MindAR
-
-      try {
-
-        await scene.systems["mindar-image-system"].start();
-
-      } catch (error) {
-
-        console.error(
-          "Error al iniciar la cámara:",
-          error
-        );
-
-        scanMessage.textContent =
-          "No se pudo iniciar la cámara. Verifica los permisos del navegador.";
-
-        startButton.disabled = false;
-
-        experienceStarted = false;
-
-      }
-
-    });
-
-
-    // ==========================================
-    // CUANDO SE DETECTA LA IMAGEN
-    // ==========================================
-
-    target.addEventListener("targetFound", () => {
-
-      console.log("Imagen detectada");
-
-      targetVisible = true;
-
-      scanMessage.style.display = "none";
-
-      audioButton.style.display = "flex";
-
-
-      // Mantener el estado del audio
-
-      video.muted = !audioEnabled;
-
-
-      // Reproducir video
-
-      video.play().catch(error => {
-
-        console.error(
-          "Error al reproducir video:",
-          error
-        );
-
-      });
-
-    });
-
-
-    // ==========================================
-    // CUANDO SE PIERDE LA IMAGEN
-    // ==========================================
-
-    target.addEventListener("targetLost", () => {
-
-      console.log("Imagen perdida");
-
-      targetVisible = false;
-
-
-      // Pausar video
-
-      video.pause();
-
-
-      // Ocultar botón de audio
-
-      audioButton.style.display = "none";
-
-
-      // Mostrar mensaje de escaneo
-
-      scanMessage.textContent =
-        "Busca nuevamente la imagen";
-
-      scanMessage.style.display = "block";
-
-    });
-
-
-    // ==========================================
-    // VISIBILIDAD DE LA PESTAÑA
-    // ==========================================
-
-    document.addEventListener(
-      "visibilitychange",
-      () => {
-
-        if (document.hidden) {
-
-          video.pause();
-
-        } else if (targetVisible) {
-
-          video.play().catch(() => {});
+            iconSoundOn.style.display = video.muted ? "none" : "block";
+            iconSoundOff.style.display = video.muted ? "block" : "none";
 
         }
 
-      }
-    );
+        audioButton.addEventListener("click", toggleAudio);
 
+        // ----------------------------------
+        // PANTALLA COMPLETA
+        // ----------------------------------
 
-    // ==========================================
-    // ERRORES DE REALIDAD AUMENTADA
-    // ==========================================
+        fullscreenButton.addEventListener("click", async () => {
 
-    scene.addEventListener("arError", (event) => {
+            try {
 
-      console.error(
-        "Error de realidad aumentada:",
-        event.detail
-      );
+                if (!document.fullscreenElement) {
 
-    });
+                    await document.documentElement.requestFullscreen();
 
+                } else {
 
-    // ==========================================
-    // INICIALIZAR ICONOS
-    // ==========================================
+                    await document.exitFullscreen();
 
-    updateAudioButton();
+                }
 
-    updateFullscreenButton();
+            } catch (error) {
 
-  </script>
+                console.log("No se pudo cambiar pantalla completa:", error);
+
+            }
+
+        });
+
+        function updateFullscreenIcon() {
+
+            const isFullscreen = !!document.fullscreenElement;
+
+            iconMaximize.style.display = isFullscreen ? "none" : "block";
+            iconMinimize.style.display = isFullscreen ? "block" : "none";
+
+            // Reajustar dimensiones sin detener la cámara
+            refreshARLayout();
+
+        }
+
+        document.addEventListener("fullscreenchange", updateFullscreenIcon);
+
+        // ----------------------------------
+        // DETECTAR CAMBIO DE ORIENTACIÓN
+        // ----------------------------------
+
+        window.addEventListener("orientationchange", refreshARLayout);
+
+        window.addEventListener("resize", refreshARLayout);
+
+        if (screen.orientation) {
+            screen.orientation.addEventListener("change", refreshARLayout);
+        }
+
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener("resize", refreshARLayout);
+        }
+
+        // ----------------------------------
+        // FUNCIÓN DE REAJUSTE AR
+        // ----------------------------------
+
+        function refreshARLayout() {
+
+            if (!experienceStarted || !scene.hasLoaded) return;
+
+            clearTimeout(resizeTimeout);
+
+            resizeTimeout = setTimeout(() => {
+
+                const width = window.innerWidth;
+                const height = window.innerHeight;
+
+                if (scene.renderer && scene.canvas) {
+
+                    scene.renderer.setSize(width, height, false);
+
+                    scene.canvas.style.width = width + "px";
+                    scene.canvas.style.height = height + "px";
+
+                }
+
+                camera.object3D.updateMatrixWorld(true);
+                videoPlane.object3D.updateMatrixWorld(true);
+
+                console.log("AR reajustado:", width, height);
+
+                /*
+                    IMPORTANTE:
+                    No detener ni reiniciar MindAR.
+                    No disparar otro evento resize.
+                    Esto evita ciclos infinitos de reajuste.
+                */
+
+            }, 300);
+
+        }
+
+        // ----------------------------------
+        // PAUSAR VIDEO SI SE OCULTA LA PÁGINA
+        // ----------------------------------
+
+        document.addEventListener("visibilitychange", () => {
+
+            if (document.hidden) {
+
+                video.pause();
+
+            } else if (targetVisible) {
+
+                video.play().catch(error => {
+                    console.log("No se pudo reanudar el video:", error);
+                });
+
+            }
+
+        });
+
+        // ----------------------------------
+        // DETECTAR TOQUE SOBRE EL VIDEO
+        // PARA ACTIVAR / DESACTIVAR AUDIO
+        // ----------------------------------
+
+        scene.addEventListener("loaded", () => {
+
+            const raycaster = new THREE.Raycaster();
+            const pointer = new THREE.Vector2();
+
+            scene.canvas.addEventListener("pointerup", (event) => {
+
+                if (!experienceStarted || !targetVisible) return;
+
+                const rect = scene.canvas.getBoundingClientRect();
+
+                pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+                const cam = camera.getObject3D("camera");
+
+                if (!cam) return;
+
+                raycaster.setFromCamera(pointer, cam);
+
+                const intersections = raycaster.intersectObject(
+                    videoPlane.object3D,
+                    true
+                );
+
+                if (intersections.length > 0) {
+
+                    toggleAudio();
+
+                }
+
+            });
+
+        });
+
+        // Estado inicial de iconos
+        updateAudioIcon();
+        updateFullscreenIcon();
+
+    </script>
 
 </body>
 </html>
