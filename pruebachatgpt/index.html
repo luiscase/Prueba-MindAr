@@ -1,0 +1,384 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+  <title>Experiencia WebAR</title>
+
+  <!-- A-Frame -->
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+
+  <!-- MindAR -->
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: Arial, sans-serif;
+    }
+
+    /* Pantalla inicial */
+    #splash-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: #111;
+      color: white;
+      text-align: center;
+      padding: 25px;
+      transition: opacity .5s ease;
+    }
+
+    #start-button {
+      border: none;
+      border-radius: 30px;
+      padding: 16px 35px;
+      margin-top: 25px;
+      background: white;
+      color: #111;
+      font-size: 17px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    /* Mensaje de escaneo */
+    #scan-message {
+      position: fixed;
+      top: 8%;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      color: white;
+      background: rgba(0,0,0,.55);
+      padding: 12px 20px;
+      border-radius: 25px;
+      font-size: 14px;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    /* Botón de audio */
+    #audio-button {
+      position: fixed;
+      display: none;
+      bottom: 35px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      width: 58px;
+      height: 58px;
+      border: 2px solid white;
+      border-radius: 50%;
+      background: rgba(0,0,0,.75);
+      color: white;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #audio-button svg {
+      width: 28px;
+      height: 28px;
+      fill: none;
+      stroke: white;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    #audio-button:active {
+      transform: translateX(-50%) scale(.92);
+    }
+
+    /* Ocultar elementos de interfaz de MindAR */
+    .mindar-ui-overlay,
+    .mindar-ui-loading {
+      z-index: 5 !important;
+    }
+
+    a-scene {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Pantalla de inicio -->
+  <div id="splash-screen">
+    <h2>Experiencia de Realidad Aumentada</h2>
+    <p>Presiona el botón para activar la cámara.</p>
+    <button id="start-button">INICIAR EXPERIENCIA</button>
+  </div>
+
+  <!-- Mensaje de escaneo -->
+  <div id="scan-message" style="display:none;">
+    Apunta tu cámara hacia la imagen
+  </div>
+
+  <!-- Botón para activar / desactivar audio -->
+  <button id="audio-button" aria-label="Activar sonido">
+
+    <!-- Bocina apagada -->
+    <svg id="icon-muted" viewBox="0 0 24 24">
+      <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+      <line x1="23" y1="9" x2="17" y2="15"/>
+      <line x1="17" y1="9" x2="23" y2="15"/>
+    </svg>
+
+    <!-- Bocina encendida -->
+    <svg id="icon-sound" viewBox="0 0 24 24"
+         style="display:none;">
+      <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+      <path d="M15.5 8.5a5 5 0 0 1 0 7"/>
+      <path d="M19 5a10 10 0 0 1 0 14"/>
+    </svg>
+
+  </button>
+
+  <!-- ESCENA AR -->
+  <a-scene
+    mindar-image="
+      imageTargetSrc: ./targets.mind;
+      autoStart: false;
+      maxTrack: 1;
+      filterMinCF: 0.0005;
+      filterBeta: 1000;
+      warmupTolerance: 5;
+      missTolerance: 5;
+    "
+    color-space="sRGB"
+    renderer="
+      colorManagement: true;
+      physicallyCorrectLights: true;
+      precision: mediump;
+      antialias: true;
+      alpha: true;
+    "
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false"
+    loading-screen="enabled: false"
+  >
+
+    <a-assets>
+      <!-- Video -->
+      <video
+        id="arVideo"
+        src="./video.mp4"
+        preload="auto"
+        loop
+        muted
+        playsinline
+        webkit-playsinline
+        crossorigin="anonymous">
+      </video>
+    </a-assets>
+
+    <!-- Cámara -->
+    <a-camera
+      position="0 0 0"
+      look-controls="enabled: false"
+      wasd-controls="enabled: false">
+    </a-camera>
+
+    <!-- Imagen objetivo -->
+    <a-entity
+      id="imageTarget"
+      mindar-image-target="targetIndex: 0">
+
+      <!-- Video anclado a la imagen -->
+      <a-video
+        id="videoPlane"
+        src="#arVideo"
+        position="0 0 0.01"
+        rotation="0 0 0"
+        width="1"
+        height="0.5625"
+        material="
+          shader: flat;
+          side: double;
+          transparent: false;
+        ">
+      </a-video>
+
+    </a-entity>
+
+  </a-scene>
+
+  <script>
+    const scene = document.querySelector("a-scene");
+    const target = document.querySelector("#imageTarget");
+    const video = document.querySelector("#arVideo");
+
+    const splash = document.querySelector("#splash-screen");
+    const startButton = document.querySelector("#start-button");
+    const scanMessage = document.querySelector("#scan-message");
+
+    const audioButton = document.querySelector("#audio-button");
+    const iconMuted = document.querySelector("#icon-muted");
+    const iconSound = document.querySelector("#icon-sound");
+
+    let targetVisible = false;
+    let audioEnabled = false;
+    let experienceStarted = false;
+
+    // Estado inicial del video
+    video.muted = true;
+    video.pause();
+
+    // Actualizar iconos de audio
+    function updateAudioButton() {
+      iconMuted.style.display = audioEnabled ? "none" : "block";
+      iconSound.style.display = audioEnabled ? "block" : "none";
+
+      audioButton.setAttribute(
+        "aria-label",
+        audioEnabled ? "Desactivar sonido" : "Activar sonido"
+      );
+    }
+
+    // Iniciar experiencia
+    startButton.addEventListener("click", async () => {
+
+      if (experienceStarted) return;
+
+      experienceStarted = true;
+
+      startButton.disabled = true;
+      startButton.textContent = "INICIANDO...";
+
+      // Desbloquear reproducción de video en móviles
+      video.muted = true;
+
+      try {
+        await video.play();
+        video.pause();
+        video.currentTime = 0;
+      } catch (error) {
+        console.log("El navegador requiere iniciar el video al detectar la imagen.");
+      }
+
+      // Activar pantalla completa cuando el navegador lo permita
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+
+      // Ocultar pantalla inicial
+      splash.style.opacity = "0";
+
+      setTimeout(() => {
+        splash.style.display = "none";
+      }, 500);
+
+      scanMessage.style.display = "block";
+
+      // Iniciar MindAR
+      try {
+        await scene.systems["mindar-image-system"].start();
+      } catch (error) {
+        console.error("Error al iniciar la cámara:", error);
+        scanMessage.textContent =
+          "No se pudo iniciar la cámara. Verifica los permisos del navegador.";
+        startButton.disabled = false;
+        experienceStarted = false;
+      }
+    });
+
+    // CUANDO SE DETECTA LA IMAGEN
+    target.addEventListener("targetFound", () => {
+
+      console.log("Imagen detectada");
+
+      targetVisible = true;
+
+      scanMessage.style.display = "none";
+      audioButton.style.display = "flex";
+
+      // Recuperar el audio seleccionado por el usuario
+      video.muted = !audioEnabled;
+
+      // Reproducir video
+      video.play().catch(error => {
+        console.error("Error al reproducir video:", error);
+      });
+
+    });
+
+    // CUANDO SE PIERDE LA IMAGEN
+    target.addEventListener("targetLost", () => {
+
+      console.log("Imagen perdida");
+
+      targetVisible = false;
+
+      // Pausar video
+      video.pause();
+
+      // Ocultar botón de audio
+      audioButton.style.display = "none";
+
+      // Mostrar mensaje de escaneo
+      scanMessage.textContent = "Busca nuevamente la imagen";
+      scanMessage.style.display = "block";
+
+    });
+
+    // ACTIVAR / DESACTIVAR AUDIO
+    audioButton.addEventListener("click", () => {
+
+      audioEnabled = !audioEnabled;
+
+      video.muted = !audioEnabled;
+
+      updateAudioButton();
+
+      // Si el video está visible, asegurar reproducción
+      if (targetVisible && video.paused) {
+        video.play().catch(error => {
+          console.error("Error al reproducir audio:", error);
+        });
+      }
+
+    });
+
+    updateAudioButton();
+
+    // Manejo de errores
+    scene.addEventListener("arError", (event) => {
+      console.error("Error de realidad aumentada:", event.detail);
+    });
+
+    // Evitar reproducción cuando la pestaña queda en segundo plano
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        video.pause();
+      } else if (targetVisible) {
+        video.play().catch(() => {});
+      }
+    });
+
+  </script>
+
+</body>
+</html>
+
