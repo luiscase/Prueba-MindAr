@@ -182,6 +182,17 @@
                 webkit-playsinline
                 crossorigin="anonymous"
             ></video>
+
+            <video
+                id="video2"
+                src="./video2.mp4"
+                preload="auto"
+                loop
+                muted
+                playsinline
+                webkit-playsinline
+                crossorigin="anonymous"
+            ></video>
         </a-assets>
 
         <a-camera
@@ -196,6 +207,18 @@
             <a-video
                 id="video-plane"
                 src="#video"
+                width="1"
+                height="0.5625"
+                position="0 0 0.01"
+            ></a-video>
+
+        </a-entity>
+
+        <a-entity id="target" mindar-image-target="targetIndex: 1">
+
+            <a-video
+                id="video-plane"
+                src="#video2"
                 width="1"
                 height="0.5625"
                 position="0 0 0.01"
