@@ -3,7 +3,9 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
     <title>Experiencia WebAR</title>
 
@@ -16,6 +18,8 @@
         }
 
         html, body {
+            position: fixed;
+            inset: 0;
             margin: 0;
             padding: 0;
             width: 100%;
@@ -26,10 +30,11 @@
         }
 
         a-scene {
-            position: fixed;
-            inset: 0;
-            width: 100%;
-            height: 100%;
+            position: fixed !important;
+            inset: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            overflow: hidden;
         }
 
         /* Pantalla inicial */
@@ -104,7 +109,7 @@
 
 <body>
 
-    <!-- Pantalla de inicio -->
+    <!-- Pantalla inicial -->
     <div id="splash-screen">
         <div>
             <h2>Experiencia de Realidad Aumentada</h2>
@@ -114,7 +119,9 @@
     </div>
 
     <!-- Botón pantalla completa -->
-    <button id="fullscreen-button" class="control-button" aria-label="Pantalla completa">
+    <button id="fullscreen-button"
+            class="control-button"
+            aria-label="Pantalla completa">
 
         <svg id="icon-maximize" viewBox="0 0 24 24">
             <path d="M8 3H5a2 2 0 0 0-2 2v3"></path>
@@ -133,7 +140,9 @@
     </button>
 
     <!-- Botón de audio -->
-    <button id="audio-button" class="control-button" aria-label="Activar o desactivar audio">
+    <button id="audio-button"
+            class="control-button"
+            aria-label="Activar o desactivar audio">
 
         <svg id="icon-sound-off" viewBox="0 0 24 24">
             <path d="M11 5 6 9H2v6h4l5 4z"></path>
@@ -259,6 +268,7 @@
         const videoPlane2 = document.querySelector("#video-plane2");
 
         let experienceStarted = false;
+
         let target1Visible = false;
         let target2Visible = false;
 
@@ -278,8 +288,8 @@
                 activeVideo.pause();
             }
 
-            video1 !== video && video1.pause();
-            video2 !== video && video2.pause();
+            if (video1 !== video) video1.pause();
+            if (video2 !== video) video2.pause();
 
             activeVideo = video;
             activeVideoPlane = plane;
@@ -323,6 +333,7 @@
             console.log("Marcador 1 perdido");
 
             target1Visible = false;
+
             pauseTargetVideo(video1);
 
         });
@@ -343,6 +354,7 @@
             console.log("Marcador 2 perdido");
 
             target2Visible = false;
+
             pauseTargetVideo(video2);
 
         });
@@ -414,9 +426,9 @@
         document.addEventListener("click", event => {
 
             if (
-                event.target === fullscreenButton ||
-                event.target === audioButton ||
-                event.target === startButton
+                event.target.closest("#fullscreen-button") ||
+                event.target.closest("#audio-button") ||
+                event.target.closest("#start-button")
             ) return;
 
             handleVideoTouch(event);
@@ -453,7 +465,9 @@
                 }
 
             } catch (error) {
+
                 console.warn("Pantalla completa no disponible:", error);
+
             }
 
             updateFullscreenIcon();
@@ -462,8 +476,14 @@
         });
 
         document.addEventListener("fullscreenchange", () => {
+
             updateFullscreenIcon();
+
+            // No detener ni reiniciar MindAR.
+            // Reajustar únicamente cámara, proyección y canvas.
+
             scheduleARResize();
+
         });
 
         /* --------------------------------
@@ -522,9 +542,12 @@
             let videoDisplayHeight;
 
             if (inputRatio > containerRatio) {
+
                 videoDisplayHeight = containerHeight;
                 videoDisplayHeight *= inputAdjust;
+
             } else {
+
                 const videoDisplayWidth = containerWidth;
 
                 videoDisplayHeight =
@@ -558,6 +581,7 @@
 
             threeCamera.updateProjectionMatrix();
 
+            videoCamera.style.position = "absolute";
             videoCamera.style.top = (-(vh - containerHeight) / 2) + "px";
             videoCamera.style.left = (-(vw - containerWidth) / 2) + "px";
             videoCamera.style.width = vw + "px";
@@ -574,8 +598,16 @@
                 scene.renderer.setSize(containerWidth, containerHeight, false);
             }
 
-            console.log("MindAR recalibrado:", containerWidth, containerHeight);
+            console.log(
+                "MindAR recalibrado:",
+                containerWidth,
+                containerHeight
+            );
         }
+
+        /* --------------------------------
+           REAJUSTAR DESPUÉS DE FULLSCREEN
+        -------------------------------- */
 
         function scheduleARResize() {
 
@@ -584,8 +616,22 @@
             clearTimeout(resizeTimeout);
 
             resizeTimeout = setTimeout(() => {
+
                 resizeMindARSystem();
-            }, 400);
+
+                requestAnimationFrame(() => {
+                    resizeMindARSystem();
+                });
+
+                setTimeout(() => {
+                    resizeMindARSystem();
+                }, 300);
+
+                setTimeout(() => {
+                    resizeMindARSystem();
+                }, 700);
+
+            }, 150);
         }
 
         /* --------------------------------
@@ -601,6 +647,33 @@
                 startButton.disabled = true;
                 startButton.textContent = "INICIANDO...";
 
+                /*
+                 * Solicitar pantalla completa directamente
+                 * desde el toque del usuario.
+                 */
+
+                let fullscreenPromise = Promise.resolve();
+
+                if (!document.fullscreenElement) {
+
+                    const element = document.documentElement;
+
+                    if (element.requestFullscreen) {
+
+                        fullscreenPromise = element.requestFullscreen()
+                            .catch(error => {
+
+                                console.warn(
+                                    "No fue posible activar pantalla completa:",
+                                    error
+                                );
+
+                            });
+
+                    }
+                }
+
+                // Iniciar MindAR
                 await scene.systems["mindar-image-system"].start();
 
                 experienceStarted = true;
@@ -615,9 +688,13 @@
 
                 updateAudioIcon();
 
-                console.log("Experiencia AR iniciada correctamente");
+                // Esperar respuesta de pantalla completa
+                await fullscreenPromise;
 
+                // Recalibrar cámara
                 scheduleARResize();
+
+                console.log("Experiencia AR iniciada correctamente");
 
             } catch (error) {
 
@@ -632,6 +709,7 @@
                     "Error al iniciar AR:\n" +
                     (error.message || error)
                 );
+
             }
 
         });
@@ -641,8 +719,14 @@
         -------------------------------- */
 
         scene.addEventListener("arError", event => {
+
             console.error("ERROR INTERNO DE MINDAR:", event);
+
         });
+
+        /* --------------------------------
+           MINDAR LISTO
+        -------------------------------- */
 
         scene.addEventListener("arReady", () => {
 
@@ -651,23 +735,37 @@
             const system = scene.systems["mindar-image-system"];
 
             if (!system) {
+
                 console.error("No se encontró el sistema MindAR");
                 return;
+
             }
 
             patchedSystem = system;
 
+            // Sustituir el método interno de reajuste
             system._resize = resizeMindARSystem;
 
             window.addEventListener("resize", scheduleARResize);
+
             window.addEventListener("orientationchange", scheduleARResize);
 
             if (screen.orientation) {
-                screen.orientation.addEventListener("change", scheduleARResize);
+
+                screen.orientation.addEventListener(
+                    "change",
+                    scheduleARResize
+                );
+
             }
 
             if (window.visualViewport) {
-                window.visualViewport.addEventListener("resize", scheduleARResize);
+
+                window.visualViewport.addEventListener(
+                    "resize",
+                    scheduleARResize
+                );
+
             }
 
             scheduleARResize();
@@ -675,7 +773,7 @@
         });
 
         /* --------------------------------
-           AL SALIR DE LA PÁGINA
+           CUANDO EL USUARIO SALE DE LA PÁGINA
         -------------------------------- */
 
         document.addEventListener("visibilitychange", () => {
@@ -689,16 +787,22 @@
             } else {
 
                 if (target1Visible) {
-                    playTargetVideo(video1, videoPlane1);
-                }
 
-                if (target2Visible) {
+                    playTargetVideo(video1, videoPlane1);
+
+                } else if (target2Visible) {
+
                     playTargetVideo(video2, videoPlane2);
+
                 }
 
             }
 
         });
+
+        /* --------------------------------
+           INICIALIZACIÓN DE ICONOS
+        -------------------------------- */
 
         updateAudioIcon();
         updateFullscreenIcon();
