@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#000000">
 
-    <title>Experiencia WebAR</title>
+    <title>Experiencia WebAR - 2 Marcadores</title>
 
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
@@ -35,7 +35,6 @@
             height: 100dvh;
         }
 
-        /* Video de cámara: siempre detrás del canvas */
         video[autoplay] {
             position: absolute !important;
             z-index: 0 !important;
@@ -43,7 +42,6 @@
             object-fit: fill;
         }
 
-        /* Escena AR */
         a-scene {
             position: fixed !important;
             inset: 0 !important;
@@ -119,19 +117,16 @@
             stroke-linejoin: round;
         }
 
-        /* Pantalla completa: esquina superior derecha */
+        /* Pantalla completa */
         #fullscreen-button {
             top: max(20px, env(safe-area-inset-top));
             right: max(20px, env(safe-area-inset-right));
         }
 
-        /* Bocina: abajo de boton fullscreen */
+        /* Audio debajo de pantalla completa */
         #audio-button {
-    		top: max(78px, calc(env(safe-area-inset-top) + 58px));
-    		right: max(20px, env(safe-area-inset-right));
-    		left: auto;
-   		 bottom: auto;
-   		 transform: none;
+            top: max(78px, calc(env(safe-area-inset-top) + 58px));
+            right: max(20px, env(safe-area-inset-right));
         }
 
         #icon-sound-off,
@@ -172,9 +167,11 @@
     >
 
         <a-assets>
+
+            <!-- Video del marcador 1 -->
             <video
-                id="video"
-                src="./video.mp4"
+                id="video1"
+                src="./video1.mp4"
                 preload="auto"
                 loop
                 muted
@@ -183,6 +180,7 @@
                 crossorigin="anonymous"
             ></video>
 
+            <!-- Video del marcador 2 -->
             <video
                 id="video2"
                 src="./video2.mp4"
@@ -193,6 +191,7 @@
                 webkit-playsinline
                 crossorigin="anonymous"
             ></video>
+
         </a-assets>
 
         <a-camera
@@ -201,12 +200,15 @@
             look-controls="enabled: false"
         ></a-camera>
 
-        <!-- Target -->
-        <a-entity id="target" mindar-image-target="targetIndex: 0">
+        <!-- MARCADOR 1 -->
+        <a-entity
+            id="target1"
+            mindar-image-target="targetIndex: 0"
+        >
 
             <a-video
-                id="video-plane"
-                src="#video"
+                id="video-plane1"
+                src="#video1"
                 width="1"
                 height="0.5625"
                 position="0 0 0.01"
@@ -214,10 +216,14 @@
 
         </a-entity>
 
-        <a-entity id="target" mindar-image-target="targetIndex: 1">
+        <!-- MARCADOR 2 -->
+        <a-entity
+            id="target2"
+            mindar-image-target="targetIndex: 1"
+        >
 
             <a-video
-                id="video-plane"
+                id="video-plane2"
                 src="#video2"
                 width="1"
                 height="0.5625"
@@ -228,7 +234,7 @@
 
     </a-scene>
 
-    <!-- Botón de pantalla completa -->
+    <!-- Pantalla completa -->
     <button id="fullscreen-button" class="control-button" aria-label="Pantalla completa">
 
         <svg id="icon-maximize" viewBox="0 0 24 24">
@@ -247,7 +253,7 @@
 
     </button>
 
-    <!-- Botón de audio -->
+    <!-- Audio -->
     <button id="audio-button" class="control-button" aria-label="Activar o desactivar audio">
 
         <svg id="icon-sound-off" viewBox="0 0 24 24">
@@ -265,16 +271,27 @@
     </button>
 
     <script>
+
         const scene = document.querySelector("a-scene");
 
         const startButton = document.getElementById("start-button");
         const splash = document.getElementById("splash-screen");
 
-        const video = document.getElementById("video");
-        const target = document.getElementById("target");
-        const videoPlane = document.getElementById("video-plane");
         const camera = document.getElementById("camera");
 
+        // Videos
+        const video1 = document.getElementById("video1");
+        const video2 = document.getElementById("video2");
+
+        // Marcadores
+        const target1 = document.getElementById("target1");
+        const target2 = document.getElementById("target2");
+
+        // Planos de video
+        const videoPlane1 = document.getElementById("video-plane1");
+        const videoPlane2 = document.getElementById("video-plane2");
+
+        // Controles
         const audioButton = document.getElementById("audio-button");
         const fullscreenButton = document.getElementById("fullscreen-button");
 
@@ -285,12 +302,25 @@
         const iconMinimize = document.getElementById("icon-minimize");
 
         let experienceStarted = false;
-        let targetVisible = false;
+
+        let target1Visible = false;
+        let target2Visible = false;
+
+        let activeVideo = null;
+        let activeVideoPlane = null;
+
         let resizeTimer = null;
         let patchedSystem = null;
 
-        video.muted = true;
-        video.pause();
+        // ---------------------------------------
+        // CONFIGURACIÓN INICIAL
+        // ---------------------------------------
+
+        video1.muted = true;
+        video2.muted = true;
+
+        video1.pause();
+        video2.pause();
 
         scene.pause();
 
@@ -306,14 +336,17 @@
 
                 experienceStarted = true;
 
-                // Solicitar pantalla completa.
-                // Si el navegador no la permite, la experiencia continúa.
+                // Solicitar pantalla completa
                 try {
+
                     if (document.documentElement.requestFullscreen) {
                         await document.documentElement.requestFullscreen();
                     }
+
                 } catch (fullscreenError) {
+
                     console.log("Pantalla completa no disponible:", fullscreenError);
+
                 }
 
                 // Iniciar MindAR
@@ -323,7 +356,7 @@
                 audioButton.style.display = "flex";
                 fullscreenButton.style.display = "flex";
 
-                // Ocultar pantalla inicial
+                // Ocultar splash
                 splash.style.opacity = "0";
 
                 setTimeout(() => {
@@ -343,34 +376,94 @@
         });
 
         // ---------------------------------------
-        // DETECCIÓN DEL TARGET
+        // CONTROL DE VIDEOS
         // ---------------------------------------
 
-        target.addEventListener("targetFound", () => {
+        function playTargetVideo(video) {
 
-            targetVisible = true;
+            // Detener el otro video
+            if (activeVideo && activeVideo !== video) {
+
+                activeVideo.pause();
+
+            }
+
+            activeVideo = video;
 
             video.play().catch(error => {
                 console.log("Error reproduciendo video:", error);
             });
 
-        });
+        }
 
-        target.addEventListener("targetLost", () => {
-
-            targetVisible = false;
+        function pauseTargetVideo(video) {
 
             video.pause();
+
+            if (activeVideo === video) {
+                activeVideo = null;
+                activeVideoPlane = null;
+            }
+
+        }
+
+        // ---------------------------------------
+        // MARCADOR 1
+        // ---------------------------------------
+
+        target1.addEventListener("targetFound", () => {
+
+            target1Visible = true;
+
+            activeVideoPlane = videoPlane1;
+
+            video2.pause();
+
+            playTargetVideo(video1);
+
+        });
+
+        target1.addEventListener("targetLost", () => {
+
+            target1Visible = false;
+
+            pauseTargetVideo(video1);
 
         });
 
         // ---------------------------------------
-        // AUDIO
+        // MARCADOR 2
+        // ---------------------------------------
+
+        target2.addEventListener("targetFound", () => {
+
+            target2Visible = true;
+
+            activeVideoPlane = videoPlane2;
+
+            video1.pause();
+
+            playTargetVideo(video2);
+
+        });
+
+        target2.addEventListener("targetLost", () => {
+
+            target2Visible = false;
+
+            pauseTargetVideo(video2);
+
+        });
+
+        // ---------------------------------------
+        // AUDIO DEL VIDEO ACTIVO
         // ---------------------------------------
 
         function toggleAudio() {
 
-            video.muted = !video.muted;
+            if (!activeVideo) return;
+
+            activeVideo.muted = !activeVideo.muted;
 
             updateAudioIcon();
 
@@ -378,8 +471,10 @@
 
         function updateAudioIcon() {
 
-            iconSoundOn.style.display = video.muted ? "none" : "block";
-            iconSoundOff.style.display = video.muted ? "block" : "none";
+            const isMuted = !activeVideo || activeVideo.muted;
+
+            iconSoundOn.style.display = isMuted ? "none" : "block";
+            iconSoundOff.style.display = isMuted ? "block" : "none";
 
         }
 
@@ -427,16 +522,8 @@
         document.addEventListener("fullscreenchange", updateFullscreenIcon);
 
         // ---------------------------------------
-        // AJUSTE REAL DE MINDAR PARA ORIENTACIÓN
+        // AJUSTE DE MINDAR PARA CAMBIO DE ORIENTACIÓN
         // ---------------------------------------
-
-        /*
-          MindAR A-Frame 1.2.5 no recalcula correctamente
-          todos los parámetros al girar el dispositivo.
-
-          Esta función adapta el cálculo de proyección,
-          cámara y video al tamaño actual del contenedor.
-        */
 
         function resizeMindARSystem() {
 
@@ -458,14 +545,13 @@
 
             if (!containerWidth || !containerHeight) return;
 
-            // Mantener dimensiones originales del video de cámara
             videoCamera.setAttribute("width", videoCamera.videoWidth);
             videoCamera.setAttribute("height", videoCamera.videoHeight);
 
-            let vw, vh;
-
             const videoRatio = videoCamera.videoWidth / videoCamera.videoHeight;
             const containerRatio = containerWidth / containerHeight;
+
+            let vw, vh;
 
             if (videoRatio > containerRatio) {
 
@@ -481,7 +567,6 @@
 
             const projection = system.controller.getProjectionMatrix();
 
-            // Corrección de orientación vertical / horizontal
             const inputRatio =
                 system.controller.inputWidth / system.controller.inputHeight;
 
@@ -525,7 +610,6 @@
             const near = projection[14] / (projection[10] - 1.0);
             const far = projection[14] / (projection[10] + 1.0);
 
-            // Actualizar cámara de A-Frame
             const cameraElement = container.getElementsByTagName("a-camera")[0];
 
             if (!cameraElement) return;
@@ -541,40 +625,25 @@
 
             threeCamera.updateProjectionMatrix();
 
-            // Reposicionar y redimensionar el video de cámara
-            videoCamera.style.top =
-                (-(vh - containerHeight) / 2) + "px";
-
-            videoCamera.style.left =
-                (-(vw - containerWidth) / 2) + "px";
+            videoCamera.style.top = (-(vh - containerHeight) / 2) + "px";
+            videoCamera.style.left = (-(vw - containerWidth) / 2) + "px";
 
             videoCamera.style.width = vw + "px";
             videoCamera.style.height = vh + "px";
 
-            // Reajustar canvas
-            const canvas = scene.canvas;
+            if (scene.canvas && scene.renderer) {
 
-            if (canvas && scene.renderer) {
+                scene.canvas.style.position = "absolute";
+                scene.canvas.style.left = "0px";
+                scene.canvas.style.top = "0px";
+                scene.canvas.style.width = containerWidth + "px";
+                scene.canvas.style.height = containerHeight + "px";
 
-                canvas.style.position = "absolute";
-                canvas.style.left = "0px";
-                canvas.style.top = "0px";
-                canvas.style.width = containerWidth + "px";
-                canvas.style.height = containerHeight + "px";
-
-                scene.renderer.setSize(
-                    containerWidth,
-                    containerHeight,
-                    false
-                );
+                scene.renderer.setSize(containerWidth, containerHeight, false);
 
             }
 
-            console.log(
-                "MindAR recalibrado:",
-                containerWidth,
-                containerHeight
-            );
+            console.log("MindAR recalibrado:", containerWidth, containerHeight);
 
         }
 
@@ -608,72 +677,59 @@
 
             patchedSystem = system;
 
-            /*
-              Reemplazar el método de reajuste de la instancia.
-              MindAR ya registró su listener original; por eso
-              añadimos este listener después de arReady.
-            */
-
             system._resize = resizeMindARSystem;
 
             window.addEventListener("resize", scheduleARResize);
-
             window.addEventListener("orientationchange", scheduleARResize);
 
             if (screen.orientation) {
+
                 screen.orientation.addEventListener(
                     "change",
                     scheduleARResize
                 );
+
             }
 
             if (window.visualViewport) {
+
                 window.visualViewport.addEventListener(
                     "resize",
                     scheduleARResize
                 );
+
             }
 
-            // Primera calibración
             scheduleARResize();
 
         });
 
         // ---------------------------------------
-        // SALIR / ENTRAR DE PANTALLA COMPLETA
-        // ---------------------------------------
-
-        /*
-          IMPORTANTE:
-          No llamamos stop(), pause() ni start() de MindAR.
-          Así la cámara sigue transmitiendo al salir de fullscreen.
-        */
-
-        document.addEventListener("fullscreenchange", () => {
-
-            updateFullscreenIcon();
-
-            scheduleARResize();
-
-        });
-
-        // ---------------------------------------
-        // PAUSAR VIDEO DE CONTENIDO AL OCULTAR PÁGINA
+        // VISIBILIDAD DE PÁGINA
         // ---------------------------------------
 
         document.addEventListener("visibilitychange", () => {
 
             if (document.hidden) {
 
-                video.pause();
+                video1.pause();
+                video2.pause();
 
-            } else if (targetVisible) {
+            } else {
 
-                video.play().catch(error => {
-                    console.log("No se pudo reanudar el video:", error);
-                });
+                if (target1Visible) {
+
+                    playTargetVideo(video1);
+
+                } else if (target2Visible) {
+
+                    playTargetVideo(video2);
+
+                }
 
             }
+
+            updateAudioIcon();
 
         });
 
@@ -688,15 +744,7 @@
 
             scene.canvas.addEventListener("pointerup", (event) => {
 
-                if (!experienceStarted || !targetVisible) return;
-
-                // Evitar que el toque sobre los botones active el audio
-                if (
-                    event.target.closest &&
-                    event.target.closest(".control-button")
-                ) {
-                    return;
-                }
+                if (!experienceStarted || !activeVideoPlane) return;
 
                 const rect = scene.canvas.getBoundingClientRect();
 
@@ -713,12 +761,14 @@
                 raycaster.setFromCamera(pointer, threeCamera);
 
                 const intersections = raycaster.intersectObject(
-                    videoPlane.object3D,
+                    activeVideoPlane.object3D,
                     true
                 );
 
                 if (intersections.length > 0) {
+
                     toggleAudio();
+
                 }
 
             });
