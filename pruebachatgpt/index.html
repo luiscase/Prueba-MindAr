@@ -62,6 +62,26 @@
             cursor: pointer;
         }
 
+        /* Mensaje para escanear */
+        #scan-message {
+            position: fixed;
+            z-index: 900;
+            left: 50%;
+            bottom: max(45px, calc(env(safe-area-inset-bottom) + 25px));
+            transform: translateX(-50%);
+            width: min(90%, 420px);
+            padding: 14px 20px;
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.70);
+            color: #fff;
+            text-align: center;
+            font-size: 16px;
+            line-height: 1.4;
+            font-weight: 500;
+            display: none;
+            pointer-events: none;
+        }
+
         /* Controles */
         .control-button {
             position: fixed;
@@ -116,6 +136,11 @@
             <p>Presiona el botón para comenzar.</p>
             <button id="start-button">INICIAR EXPERIENCIA</button>
         </div>
+    </div>
+
+    <!-- Mensaje cuando no se detecta ningún marcador -->
+    <div id="scan-message">
+        Por favor, escanea la imagen para iniciar la experiencia.
     </div>
 
     <!-- Botón pantalla completa -->
@@ -220,8 +245,31 @@
                 src="#video1"
                 width="1"
                 height="0.5625"
-                position="0 0 0.1">
+                position="0 0 0.01">
             </a-video>
+
+            <!-- Área táctil del mensaje de audio -->
+            <a-plane
+                id="sound-hit1"
+                width="1"
+                height="0.13"
+                position="0 -0.36 0.025"
+                material="color: #000000; transparent: true; opacity: 0.01; depthWrite: false">
+            </a-plane>
+
+            <!-- Texto anclado al marcador -->
+            <a-text
+                id="sound-text1"
+                value="Click para activar sonido"
+                color="#FFFFFF"
+                align="center"
+                anchor="center"
+                width="1.5"
+                scale="0.75 0.75 0.75"
+                position="0 -0.36 0.03"
+                shader="msdf"
+                negate="false">
+            </a-text>
 
         </a-entity>
 
@@ -235,8 +283,31 @@
                 src="#video2"
                 width="1"
                 height="0.5625"
-                position="0 0 0.1">
+                position="0 0 0.01">
             </a-video>
+
+            <!-- Área táctil del mensaje de audio -->
+            <a-plane
+                id="sound-hit2"
+                width="1"
+                height="0.13"
+                position="0 -0.36 0.025"
+                material="color: #000000; transparent: true; opacity: 0.01; depthWrite: false">
+            </a-plane>
+
+            <!-- Texto anclado al marcador -->
+            <a-text
+                id="sound-text2"
+                value="Click para activar sonido"
+                color="#FFFFFF"
+                align="center"
+                anchor="center"
+                width="1.5"
+                scale="0.75 0.75 0.75"
+                position="0 -0.36 0.03"
+                shader="msdf"
+                negate="false">
+            </a-text>
 
         </a-entity>
 
@@ -248,6 +319,8 @@
         const scene = document.querySelector("#scene");
         const splash = document.querySelector("#splash-screen");
         const startButton = document.querySelector("#start-button");
+
+        const scanMessage = document.querySelector("#scan-message");
 
         const fullscreenButton = document.querySelector("#fullscreen-button");
         const audioButton = document.querySelector("#audio-button");
@@ -267,6 +340,24 @@
         const videoPlane1 = document.querySelector("#video-plane1");
         const videoPlane2 = document.querySelector("#video-plane2");
 
+        const soundHit1 = document.querySelector("#sound-hit1");
+        const soundHit2 = document.querySelector("#sound-hit2");
+
+        const soundText1 = document.querySelector("#sound-text1");
+        const soundText2 = document.querySelector("#sound-text2");
+
+        /*
+         * Detectar Safari en iPhone.
+         * Se excluyen navegadores alternativos que usan otros identificadores.
+         */
+
+        const isIPhone = /iPhone|iPod/i.test(navigator.userAgent);
+
+        const isSafari = /Safari/i.test(navigator.userAgent) &&
+            !/CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo/i.test(navigator.userAgent);
+
+        const isIPhoneSafari = isIPhone && isSafari;
+
         let experienceStarted = false;
 
         let target1Visible = false;
@@ -274,15 +365,43 @@
 
         let activeVideo = null;
         let activeVideoPlane = null;
+        let activeSoundHit = null;
+        let activeSoundText = null;
 
         let patchedSystem = null;
         let resizeTimeout = null;
+
+        /*
+         * Ocultar pantalla completa en Safari de iPhone.
+         */
+
+        if (isIPhoneSafari) {
+            fullscreenButton.style.display = "none";
+        }
 
         /* --------------------------------
            FUNCIONES DE VIDEO
         -------------------------------- */
 
-        function playTargetVideo(video, plane) {
+        function updateSoundPrompt() {
+
+            if (soundText1) {
+                soundText1.setAttribute(
+                    "visible",
+                    activeVideo === video1 && video1.muted
+                );
+            }
+
+            if (soundText2) {
+                soundText2.setAttribute(
+                    "visible",
+                    activeVideo === video2 && video2.muted
+                );
+            }
+
+        }
+
+        function playTargetVideo(video, plane, soundHit, soundText) {
 
             if (activeVideo && activeVideo !== video) {
                 activeVideo.pause();
@@ -293,6 +412,10 @@
 
             activeVideo = video;
             activeVideoPlane = plane;
+            activeSoundHit = soundHit;
+            activeSoundText = soundText;
+
+            updateSoundPrompt();
 
             video.play().catch(error => {
                 console.error("Error reproduciendo video:", error);
@@ -306,11 +429,35 @@
             video.pause();
 
             if (activeVideo === video) {
+
                 activeVideo = null;
                 activeVideoPlane = null;
+                activeSoundHit = null;
+                activeSoundText = null;
+
             }
 
+            updateSoundPrompt();
             updateAudioIcon();
+        }
+
+        /* --------------------------------
+           MENSAJE PARA ESCANEAR
+        -------------------------------- */
+
+        function updateScanMessage() {
+
+            if (!experienceStarted) {
+                scanMessage.style.display = "none";
+                return;
+            }
+
+            if (!target1Visible && !target2Visible) {
+                scanMessage.style.display = "block";
+            } else {
+                scanMessage.style.display = "none";
+            }
+
         }
 
         /* --------------------------------
@@ -324,7 +471,14 @@
             target1Visible = true;
             target2Visible = false;
 
-            playTargetVideo(video1, videoPlane1);
+            updateScanMessage();
+
+            playTargetVideo(
+                video1,
+                videoPlane1,
+                soundHit1,
+                soundText1
+            );
 
         });
 
@@ -336,6 +490,8 @@
 
             pauseTargetVideo(video1);
 
+            updateScanMessage();
+
         });
 
         target2.addEventListener("targetFound", () => {
@@ -345,7 +501,14 @@
             target2Visible = true;
             target1Visible = false;
 
-            playTargetVideo(video2, videoPlane2);
+            updateScanMessage();
+
+            playTargetVideo(
+                video2,
+                videoPlane2,
+                soundHit2,
+                soundText2
+            );
 
         });
 
@@ -356,6 +519,8 @@
             target2Visible = false;
 
             pauseTargetVideo(video2);
+
+            updateScanMessage();
 
         });
 
@@ -369,6 +534,7 @@
 
             iconSoundOn.style.display = muted ? "none" : "block";
             iconSoundOff.style.display = muted ? "block" : "none";
+
         }
 
         function toggleAudio() {
@@ -378,12 +544,14 @@
             activeVideo.muted = !activeVideo.muted;
 
             updateAudioIcon();
+            updateSoundPrompt();
+
         }
 
         audioButton.addEventListener("click", toggleAudio);
 
         /* --------------------------------
-           TOCAR VIDEO PARA ACTIVAR AUDIO
+           TOCAR VIDEO O TEXTO PARA ACTIVAR AUDIO
         -------------------------------- */
 
         const raycaster = new THREE.Raycaster();
@@ -391,7 +559,7 @@
 
         function handleVideoTouch(event) {
 
-            if (!activeVideoPlane || !activeVideo) return;
+            if (!activeVideo || !activeVideoPlane) return;
 
             const canvas = scene.canvas;
 
@@ -413,14 +581,27 @@
 
             raycaster.setFromCamera(pointer, cameraObject);
 
-            const intersections = raycaster.intersectObject(
-                activeVideoPlane.object3D,
+            const objectsToCheck = [
+                activeVideoPlane.object3D
+            ];
+
+            if (activeSoundHit) {
+                objectsToCheck.push(activeSoundHit.object3D);
+            }
+
+            if (activeSoundText) {
+                objectsToCheck.push(activeSoundText.object3D);
+            }
+
+            const intersections = raycaster.intersectObjects(
+                objectsToCheck,
                 true
             );
 
             if (intersections.length > 0) {
                 toggleAudio();
             }
+
         }
 
         document.addEventListener("click", event => {
@@ -432,6 +613,7 @@
             ) return;
 
             handleVideoTouch(event);
+
         });
 
         /* --------------------------------
@@ -444,9 +626,12 @@
 
             iconMaximize.style.display = isFullscreen ? "none" : "block";
             iconMinimize.style.display = isFullscreen ? "block" : "none";
+
         }
 
         fullscreenButton.addEventListener("click", async () => {
+
+            if (isIPhoneSafari) return;
 
             try {
 
@@ -478,10 +663,6 @@
         document.addEventListener("fullscreenchange", () => {
 
             updateFullscreenIcon();
-
-            // No detener ni reiniciar MindAR.
-            // Reajustar únicamente cámara, proyección y canvas.
-
             scheduleARResize();
 
         });
@@ -556,6 +737,7 @@
                     system.controller.inputHeight;
 
                 videoDisplayHeight *= inputAdjust;
+
             }
 
             const fovAdjust = containerHeight / videoDisplayHeight;
@@ -595,7 +777,12 @@
                 scene.canvas.style.width = containerWidth + "px";
                 scene.canvas.style.height = containerHeight + "px";
 
-                scene.renderer.setSize(containerWidth, containerHeight, false);
+                scene.renderer.setSize(
+                    containerWidth,
+                    containerHeight,
+                    false
+                );
+
             }
 
             console.log(
@@ -603,6 +790,7 @@
                 containerWidth,
                 containerHeight
             );
+
         }
 
         /* --------------------------------
@@ -632,6 +820,7 @@
                 }, 700);
 
             }, 150);
+
         }
 
         /* --------------------------------
@@ -648,13 +837,16 @@
                 startButton.textContent = "INICIANDO...";
 
                 /*
-                 * Solicitar pantalla completa directamente
-                 * desde el toque del usuario.
+                 * Android y navegadores compatibles:
+                 * solicitar pantalla completa.
+                 *
+                 * Safari en iPhone:
+                 * no solicitar pantalla completa.
                  */
 
                 let fullscreenPromise = Promise.resolve();
 
-                if (!document.fullscreenElement) {
+                if (!isIPhoneSafari && !document.fullscreenElement) {
 
                     const element = document.documentElement;
 
@@ -671,6 +863,7 @@
                             });
 
                     }
+
                 }
 
                 // Iniciar MindAR
@@ -680,13 +873,20 @@
 
                 splash.style.display = "none";
 
-                fullscreenButton.style.display = "flex";
+                // Mostrar controles
+                if (!isIPhoneSafari) {
+                    fullscreenButton.style.display = "flex";
+                }
+
                 audioButton.style.display = "flex";
 
+                // Videos inicialmente en mute
                 video1.muted = true;
                 video2.muted = true;
 
                 updateAudioIcon();
+                updateSoundPrompt();
+                updateScanMessage();
 
                 // Esperar respuesta de pantalla completa
                 await fullscreenPromise;
@@ -743,7 +943,6 @@
 
             patchedSystem = system;
 
-            // Sustituir el método interno de reajuste
             system._resize = resizeMindARSystem;
 
             window.addEventListener("resize", scheduleARResize);
@@ -788,11 +987,21 @@
 
                 if (target1Visible) {
 
-                    playTargetVideo(video1, videoPlane1);
+                    playTargetVideo(
+                        video1,
+                        videoPlane1,
+                        soundHit1,
+                        soundText1
+                    );
 
                 } else if (target2Visible) {
 
-                    playTargetVideo(video2, videoPlane2);
+                    playTargetVideo(
+                        video2,
+                        videoPlane2,
+                        soundHit2,
+                        soundText2
+                    );
 
                 }
 
