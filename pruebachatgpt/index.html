@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -34,7 +33,6 @@
             height: 100% !important;
             overflow: hidden;
         }
-
 
         #scan-message {
             position: fixed;
@@ -90,8 +88,6 @@
             top: max(78px, calc(env(safe-area-inset-top) + 58px));
             right: max(20px, env(safe-area-inset-right));
         }
-
-
 
         /* CONTROLES DE GRABACIÓN Y COMPARTIR */
         #recording-controls {
@@ -201,9 +197,6 @@
 
     </button>
 
-
-
-
     <!-- CONTROLES PARA GRABAR Y COMPARTIR LA EXPERIENCIA -->
     <div id="recording-controls" aria-live="polite">
         <div id="recording-status"></div>
@@ -259,14 +252,12 @@
 
         </a-assets>
 
-
         <!-- CÁMARA -->
         <a-camera
             id="camera"
             position="0 0 0"
             look-controls="enabled: false"
         ></a-camera>
-
 
         <!-- PRIMER MARCADOR -->
         <a-entity id="target1" mindar-image-target="targetIndex: 0">
@@ -281,7 +272,6 @@
             ></a-video>
 
         </a-entity>
-
 
         <!-- SEGUNDO MARCADOR -->
         <a-entity id="target2" mindar-image-target="targetIndex: 1">
@@ -298,7 +288,6 @@
         </a-entity>
 
     </a-scene>
-
 
     <script>
 
@@ -326,7 +315,6 @@
 
         const videoPlane1 = document.getElementById("video-plane-1");
         const videoPlane2 = document.getElementById("video-plane-2");
-
 
         // =========================================
         // DETECTAR DISPOSITIVO Y CONFIGURAR AUDIO
@@ -376,7 +364,6 @@
         let patchedSystem = null;
         let resizeTimeout = null;
 
-
         // =========================================
         // MENSAJE DE ESCANEO
         // =========================================
@@ -401,37 +388,97 @@
         updateScanMessage();
         updateAudioIcon();
 
-
         // =========================================
         // CONTROL DE AUDIO
         // =========================================
 
         function updateAudioIcon() {
 
-            const muted =
-                !activeVideo || activeVideo.muted;
+            const muted = !activeVideo || userMuted;
 
-            soundOnIcon.style.display =
-                muted ? "none" : "block";
-
-            soundOffIcon.style.display =
-                muted ? "block" : "none";
+            soundOnIcon.style.display = muted ? "none" : "block";
+            soundOffIcon.style.display = muted ? "block" : "none";
 
         }
 
+        function setVideoPlaybackMuted(video, muted) {
+            const nodes = videoAudioNodes.get(video);
+
+            // Con Web Audio controlamos el volumen mediante GainNode.
+            // El audio grabado se mantiene independiente del botón de silencio.
+            if (nodes) {
+                video.muted = false;
+                nodes.playbackGain.gain.setTargetAtTime(
+                    muted ? 0 : 1,
+                    audioContext.currentTime,
+                    0.015
+                );
+            } else {
+                video.muted = muted;
+            }
+        }
 
         function toggleAudio() {
 
             if (!activeVideo) return;
 
-            activeVideo.muted = !activeVideo.muted;
-
-            userMuted = activeVideo.muted;
+            userMuted = !userMuted;
+            setVideoPlaybackMuted(activeVideo, userMuted);
 
             updateAudioIcon();
 
         }
 
+        async function prepareRecordingAudio() {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextClass) {
+                throw new Error("Este navegador no permite mezclar el audio de los videos.");
+            }
+
+            if (!audioContext) {
+                audioContext = new AudioContextClass();
+            }
+            if (audioContext.state === "suspended") {
+                await audioContext.resume();
+            }
+
+            recordingAudioDestination = audioContext.createMediaStreamDestination();
+
+            [video1, video2].forEach(video => {
+                let nodes = videoAudioNodes.get(video);
+
+                if (!nodes) {
+                    // createMediaElementSource se crea una sola vez por elemento.
+                    const source = audioContext.createMediaElementSource(video);
+                    const playbackGain = audioContext.createGain();
+                    const recordingGain = audioContext.createGain();
+
+                    source.connect(playbackGain);
+                    playbackGain.connect(audioContext.destination);
+                    source.connect(recordingGain);
+
+                    nodes = { source, playbackGain, recordingGain };
+                    videoAudioNodes.set(video, nodes);
+                }
+
+                // La grabación recibe el audio original aunque el usuario
+                // haya silenciado los altavoces con el botón de la experiencia.
+                nodes.recordingGain.gain.setValueAtTime(1, audioContext.currentTime);
+                nodes.recordingGain.connect(recordingAudioDestination);
+
+                // El volumen que escucha el usuario sí respeta el botón de audio.
+                video.muted = false;
+                nodes.playbackGain.gain.setValueAtTime(
+                    userMuted ? 0 : 1,
+                    audioContext.currentTime
+                );
+            });
+
+            microphoneAudioSource = audioContext.createMediaStreamSource(microphoneStream);
+            microphoneAudioSource.connect(recordingAudioDestination);
+
+            return recordingAudioDestination.stream.getAudioTracks();
+        }
 
         // =========================================
         // REPRODUCCIÓN DE VIDEOS
@@ -452,7 +499,7 @@
 
             // Aplicar la preferencia inicial del dispositivo o la última
             // elección manual del usuario.
-            video.muted = userMuted;
+            setVideoPlaybackMuted(video, userMuted);
 
             // Mostrar el control de audio cuando haya un video activo.
             audioButton.style.display = "flex";
@@ -470,7 +517,7 @@
                 );
 
                 // Fallback: continuar en silencio para no detener la experiencia.
-                video.muted = true;
+                setVideoPlaybackMuted(video, true);
 
                 try {
 
@@ -491,7 +538,6 @@
 
         }
 
-
         function pauseTargetVideo(video) {
 
             video.pause();
@@ -506,7 +552,6 @@
             updateAudioIcon();
 
         }
-
 
         // =========================================
         // EVENTOS DE LOS MARCADORES
@@ -524,7 +569,6 @@
 
         });
 
-
         target1.addEventListener("targetLost", () => {
 
             console.log("Primer marcador perdido");
@@ -536,7 +580,6 @@
             updateScanMessage();
 
         });
-
 
         target2.addEventListener("targetFound", () => {
 
@@ -550,7 +593,6 @@
 
         });
 
-
         target2.addEventListener("targetLost", () => {
 
             console.log("Segundo marcador perdido");
@@ -563,7 +605,6 @@
 
         });
 
-
         // =========================================
         // BOTÓN DE AUDIO
         // =========================================
@@ -575,7 +616,6 @@
             toggleAudio();
 
         });
-
 
         // =========================================
         // BOTÓN PANTALLA COMPLETA
@@ -604,7 +644,6 @@
             }
 
         }
-
 
         fullscreenButton.addEventListener("click", async (event) => {
 
@@ -639,7 +678,6 @@
 
         });
 
-
         document.addEventListener("fullscreenchange", () => {
 
             updateFullscreenIcon();
@@ -648,7 +686,6 @@
 
         });
 
-
         // =========================================
         // DETECCIÓN DE TOQUES SOBRE EL VIDEO
         // =========================================
@@ -656,7 +693,6 @@
         const raycaster = new THREE.Raycaster();
 
         const pointer = new THREE.Vector2();
-
 
         function handleVideoTouch(event) {
 
@@ -677,7 +713,6 @@
 
             pointer.y =
                 -((touch.clientY - rect.top) / rect.height) * 2 + 1;
-
 
             const cameraObject = document
                 .querySelector("#camera")
@@ -700,7 +735,6 @@
 
         }
 
-
         document.addEventListener("click", (event) => {
 
             if (
@@ -714,7 +748,6 @@
             handleVideoTouch(event);
 
         });
-
 
         // =========================================
         // RECALIBRACIÓN DE MINDAR
@@ -778,7 +811,6 @@
 
             }
 
-
             const projection =
                 system.controller.getProjectionMatrix();
 
@@ -802,7 +834,6 @@
 
             }
 
-
             let videoDisplayHeight;
 
             if (inputRatio > containerRatio) {
@@ -823,7 +854,6 @@
 
             }
 
-
             const fovAdjust =
                 containerHeight / videoDisplayHeight;
 
@@ -836,7 +866,6 @@
 
             const far =
                 projection[14] / (projection[10] + 1.0);
-
 
             const cameraElement =
                 container.getElementsByTagName("a-camera")[0];
@@ -856,7 +885,6 @@
 
             threeCamera.updateProjectionMatrix();
 
-
             videoCamera.style.position = "absolute";
 
             videoCamera.style.top =
@@ -867,7 +895,6 @@
 
             videoCamera.style.width = vw + "px";
             videoCamera.style.height = vh + "px";
-
 
             if (scene.canvas && scene.renderer) {
 
@@ -897,7 +924,6 @@
 
         }
 
-
         function scheduleARResize() {
 
             if (!experienceStarted) return;
@@ -925,7 +951,6 @@
             }, 150);
 
         }
-
 
         // =========================================
         // EVENTOS DE MINDAR
@@ -984,15 +1009,11 @@
 
         });
 
-
         scene.addEventListener("arError", (event) => {
 
             console.error("Error de MindAR:", event);
 
         });
-
-
-
 
         // =========================================
         // GRABAR LA EXPERIENCIA + AUDIO DEL MICRÓFONO
@@ -1012,6 +1033,13 @@
         let recordingCanvas = null;
         let recordingContext = null;
         let recordingAnimationId = null;
+
+        // Audio Web Audio: permite mezclar el sonido de los videos AR
+        // y el micrófono dentro del archivo grabado.
+        let audioContext = null;
+        let recordingAudioDestination = null;
+        let videoAudioNodes = new Map();
+        let microphoneAudioSource = null;
 
         function drawRecordingFrame() {
             if (!recordingCanvas || !recordingContext) return;
@@ -1067,7 +1095,6 @@
             recordingAnimationId = requestAnimationFrame(drawRecordingFrame);
         }
 
-
         function stopRecordingStreams() {
             if (recordingAnimationId) {
                 cancelAnimationFrame(recordingAnimationId);
@@ -1079,18 +1106,28 @@
                 canvasStream = null;
             }
 
+            if (microphoneAudioSource) {
+                try { microphoneAudioSource.disconnect(); } catch (error) {}
+                microphoneAudioSource = null;
+            }
+
+            if (recordingAudioDestination) {
+                videoAudioNodes.forEach(nodes => {
+                    try { nodes.recordingGain.disconnect(recordingAudioDestination); } catch (error) {}
+                });
+                recordingAudioDestination = null;
+            }
+
             if (microphoneStream) {
                 microphoneStream.getTracks().forEach(track => track.stop());
                 microphoneStream = null;
             }
         }
 
-
         function showRecordingError(message) {
             recordingStatus.textContent = message;
             recordingStatus.style.display = "block";
         }
-
 
         async function startExperienceRecording() {
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -1123,6 +1160,9 @@
                     }
                 });
 
+                // Mezclar audio de ambos videos AR + micrófono.
+                const videoAndMicAudioTracks = await prepareRecordingAudio();
+
                 recordingCanvas = document.createElement("canvas");
                 recordingCanvas.width = Math.round(window.innerWidth * Math.min(window.devicePixelRatio || 1, 2));
                 recordingCanvas.height = Math.round(window.innerHeight * Math.min(window.devicePixelRatio || 1, 2));
@@ -1137,7 +1177,7 @@
 
                 const combinedStream = new MediaStream([
                     ...canvasStream.getVideoTracks(),
-                    ...microphoneStream.getAudioTracks()
+                    ...videoAndMicAudioTracks
                 ]);
 
                 const mimeCandidates = [
@@ -1192,7 +1232,7 @@
                 recordButton.disabled = false;
                 recordButton.classList.add("is-recording");
                 recordButtonLabel.textContent = "Detener grabación";
-                recordingStatus.textContent = "Grabando imagen y sonido del micrófono…";
+                recordingStatus.textContent = "Grabando imagen, audio de los videos AR y micrófono…";
 
             } catch (error) {
                 console.error("No se pudo iniciar la grabación:", error);
@@ -1209,7 +1249,6 @@
             }
         }
 
-
         function stopExperienceRecording() {
             if (mediaRecorder && mediaRecorder.state !== "inactive") {
                 recordButton.disabled = true;
@@ -1217,7 +1256,6 @@
                 mediaRecorder.stop();
             }
         }
-
 
         async function shareRecordedVideo() {
             if (!recordedBlob || recordedBlob.size === 0) {
@@ -1284,7 +1322,6 @@
         });
 
         shareButton.addEventListener("click", shareRecordedVideo);
-
 
         // =========================================
         // VISIBILIDAD DE LA PÁGINA
