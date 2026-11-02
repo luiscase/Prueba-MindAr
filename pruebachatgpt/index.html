@@ -59,6 +59,11 @@
             cursor: pointer;
         }
 
+        #start-button:disabled {
+            opacity: 0.65;
+            cursor: wait;
+        }
+
         #scan-message {
             position: fixed;
             z-index: 900;
@@ -123,17 +128,19 @@
 
 <body>
 
-    <!-- Pantalla inicial -->
+    <!-- PANTALLA INICIAL -->
     <div id="splash-screen">
-        <button id="start-button">INICIAR EXPERIENCIA</button>
+        <button id="start-button" disabled>
+            PREPARANDO EXPERIENCIA...
+        </button>
     </div>
 
-    <!-- Mensaje de escaneo -->
+    <!-- MENSAJE DE ESCANEO -->
     <div id="scan-message">
         Por favor, escanea la imagen para iniciar la experiencia.
     </div>
 
-    <!-- Botón pantalla completa -->
+    <!-- BOTÓN PANTALLA COMPLETA -->
     <button id="fullscreen-button" class="control-button" aria-label="Pantalla completa">
 
         <svg id="fullscreen-icon" viewBox="0 0 24 24">
@@ -145,7 +152,7 @@
 
     </button>
 
-    <!-- Botón de audio -->
+    <!-- BOTÓN AUDIO -->
     <button id="audio-button" class="control-button" aria-label="Activar o desactivar audio">
 
         <svg id="sound-on-icon" viewBox="0 0 24 24">
@@ -163,7 +170,7 @@
     </button>
 
 
-    <!-- Escena AR -->
+    <!-- ESCENA AR -->
     <a-scene
         mindar-image="
             imageTargetSrc: ./targets.mind;
@@ -182,7 +189,6 @@
 
         <a-assets>
 
-            <!-- Video del primer marcador -->
             <video
                 id="video1"
                 src="./video1.mp4"
@@ -193,7 +199,6 @@
                 crossorigin="anonymous"
             ></video>
 
-            <!-- Video del segundo marcador -->
             <video
                 id="video2"
                 src="./video2.mp4"
@@ -207,7 +212,7 @@
         </a-assets>
 
 
-        <!-- Cámara -->
+        <!-- CÁMARA -->
         <a-camera
             id="camera"
             position="0 0 0"
@@ -215,7 +220,7 @@
         ></a-camera>
 
 
-        <!-- Primer marcador -->
+        <!-- PRIMER MARCADOR -->
         <a-entity id="target1" mindar-image-target="targetIndex: 0">
 
             <a-video
@@ -230,7 +235,7 @@
         </a-entity>
 
 
-        <!-- Segundo marcador -->
+        <!-- SEGUNDO MARCADOR -->
         <a-entity id="target2" mindar-image-target="targetIndex: 1">
 
             <a-video
@@ -248,6 +253,7 @@
 
 
     <script>
+
         // =========================================
         // ELEMENTOS PRINCIPALES
         // =========================================
@@ -299,6 +305,7 @@
         // =========================================
 
         let experienceStarted = false;
+        let isStarting = false;
 
         let target1Visible = false;
         let target2Visible = false;
@@ -312,6 +319,52 @@
 
         let resizeTimeout = null;
 
+        let arSystemReady = false;
+
+
+        // =========================================
+        // ESPERAR A QUE A-FRAME Y MINDAR ESTÉN LISTOS
+        // =========================================
+
+        function checkARSystemReady() {
+
+            const mindarSystem =
+                scene.systems["mindar-image-system"];
+
+            if (scene.hasLoaded && mindarSystem) {
+
+                arSystemReady = true;
+
+                startButton.disabled = false;
+                startButton.textContent = "INICIAR EXPERIENCIA";
+
+                console.log(
+                    "A-Frame y MindAR están preparados."
+                );
+
+            }
+
+        }
+
+
+        // Deshabilitar el botón mientras carga la escena.
+        startButton.disabled = true;
+        startButton.textContent = "PREPARANDO EXPERIENCIA...";
+
+
+        if (scene.hasLoaded) {
+
+            checkARSystemReady();
+
+        } else {
+
+            scene.addEventListener(
+                "loaded",
+                checkARSystemReady
+            );
+
+        }
+
 
         // =========================================
         // MENSAJE DE ESCANEO
@@ -324,9 +377,13 @@
                 !target1Visible &&
                 !target2Visible
             ) {
+
                 scanMessage.style.display = "block";
+
             } else {
+
                 scanMessage.style.display = "none";
+
             }
 
         }
@@ -338,10 +395,14 @@
 
         function updateAudioIcon() {
 
-            const muted = !activeVideo || activeVideo.muted;
+            const muted =
+                !activeVideo || activeVideo.muted;
 
-            soundOnIcon.style.display = muted ? "none" : "block";
-            soundOffIcon.style.display = muted ? "block" : "none";
+            soundOnIcon.style.display =
+                muted ? "none" : "block";
+
+            soundOffIcon.style.display =
+                muted ? "block" : "none";
 
         }
 
@@ -389,8 +450,8 @@
                     error
                 );
 
-                // Si el navegador bloquea el audio,
-                // intentar reproducir en silencio.
+                // Reintentar en silencio si el navegador
+                // no permite reproducir con sonido.
                 video.muted = true;
 
                 try {
@@ -491,7 +552,15 @@
 
         startButton.addEventListener("click", async () => {
 
-            if (experienceStarted) return;
+            if (
+                experienceStarted ||
+                isStarting ||
+                !arSystemReady
+            ) {
+                return;
+            }
+
+            isStarting = true;
 
             try {
 
@@ -499,8 +568,13 @@
                 startButton.textContent = "INICIANDO...";
 
 
-                // Intento de desbloqueo de audio durante
-                // el gesto del usuario, antes de cualquier await.
+                // ---------------------------------
+                // INTENTO DE DESBLOQUEO DE AUDIO
+                // ---------------------------------
+
+                // Se ejecuta antes de cualquier await,
+                // aprovechando el gesto del usuario.
+
                 const audioUnlockPromises = [video1, video2].map(video => {
 
                     video.muted = false;
@@ -509,7 +583,10 @@
 
                         const promise = video.play();
 
-                        if (promise && typeof promise.then === "function") {
+                        if (
+                            promise &&
+                            typeof promise.then === "function"
+                        ) {
 
                             return promise.then(() => {
 
@@ -548,64 +625,103 @@
                 });
 
 
-                // Activar pantalla completa cuando sea compatible.
+                // ---------------------------------
+                // PANTALLA COMPLETA
+                // ---------------------------------
+
                 let fullscreenPromise = Promise.resolve();
 
-                if (!isIPhoneSafari && !document.fullscreenElement) {
+                if (
+                    !isIPhoneSafari &&
+                    !document.fullscreenElement
+                ) {
 
                     const element = document.documentElement;
 
                     if (element.requestFullscreen) {
 
-                        fullscreenPromise = element.requestFullscreen().catch(error => {
+                        fullscreenPromise =
+                            element.requestFullscreen().catch(error => {
 
-                            console.warn(
-                                "No fue posible activar pantalla completa:",
-                                error
-                            );
+                                console.warn(
+                                    "No fue posible activar pantalla completa:",
+                                    error
+                                );
 
-                        });
+                            });
 
                     }
 
                 }
 
 
-                // Iniciar MindAR.
-                await scene.systems["mindar-image-system"].start();
+                // ---------------------------------
+                // COMPROBAR SISTEMA MINDAR
+                // ---------------------------------
 
+                const mindarSystem =
+                    scene.systems["mindar-image-system"];
+
+                if (
+                    !mindarSystem ||
+                    typeof mindarSystem.start !== "function"
+                ) {
+
+                    throw new Error(
+                        "El sistema MindAR todavía no está disponible."
+                    );
+
+                }
+
+
+                // ---------------------------------
+                // INICIAR CÁMARA Y EXPERIENCIA AR
+                // ---------------------------------
+
+                await mindarSystem.start();
+
+
+                // ---------------------------------
+                // EXPERIENCIA INICIADA
+                // ---------------------------------
 
                 experienceStarted = true;
 
                 splash.style.display = "none";
 
                 if (!isIPhoneSafari) {
+
                     fullscreenButton.style.display = "flex";
+
                 }
 
                 audioButton.style.display = "flex";
 
-                // Mantener la preferencia inicial de sonido activado.
                 userMuted = false;
 
-                // Esperar el resultado del intento de desbloqueo.
                 Promise.all(audioUnlockPromises).then(results => {
 
-                    console.log("Resultado de desbloqueo de audio:", results);
+                    console.log(
+                        "Resultado de desbloqueo de audio:",
+                        results
+                    );
 
                 });
 
                 updateAudioIcon();
-
                 updateScanMessage();
 
                 await fullscreenPromise;
 
                 scheduleARResize();
 
+
             } catch (error) {
 
-                console.error("Error al iniciar la experiencia AR:", error);
+                console.error(
+                    "Error al iniciar la experiencia AR:",
+                    error
+                );
 
                 startButton.disabled = false;
                 startButton.textContent = "INTENTAR DE NUEVO";
@@ -614,6 +730,10 @@
                     "No se pudo iniciar la experiencia. " +
                     "Verifica los permisos de cámara e inténtalo nuevamente."
                 );
+
+            } finally {
+
+                isStarting = false;
 
             }
 
@@ -634,7 +754,7 @@
 
 
         // =========================================
-        // BOTÓN DE PANTALLA COMPLETA
+        // BOTÓN PANTALLA COMPLETA
         // =========================================
 
         function updateFullscreenIcon() {
@@ -682,7 +802,10 @@
 
             } catch (error) {
 
-                console.warn("Error al cambiar pantalla completa:", error);
+                console.warn(
+                    "Error al cambiar pantalla completa:",
+                    error
+                );
 
             }
 
@@ -789,19 +912,27 @@
             const videoCamera = system.video;
             const container = system.container;
 
-            if (!videoCamera.videoWidth || !videoCamera.videoHeight) {
+            if (
+                !videoCamera.videoWidth ||
+                !videoCamera.videoHeight
+            ) {
                 return;
             }
 
             const containerWidth = container.clientWidth;
             const containerHeight = container.clientHeight;
 
-            if (!containerWidth || !containerHeight) {
-                return;
-            }
+            if (!containerWidth || !containerHeight) return;
 
-            videoCamera.setAttribute("width", videoCamera.videoWidth);
-            videoCamera.setAttribute("height", videoCamera.videoHeight);
+            videoCamera.setAttribute(
+                "width",
+                videoCamera.videoWidth
+            );
+
+            videoCamera.setAttribute(
+                "height",
+                videoCamera.videoHeight
+            );
 
             const videoRatio =
                 videoCamera.videoWidth / videoCamera.videoHeight;
@@ -824,7 +955,8 @@
             }
 
 
-            const projection = system.controller.getProjectionMatrix();
+            const projection =
+                system.controller.getProjectionMatrix();
 
             const inputRatio =
                 system.controller.inputWidth /
@@ -835,12 +967,14 @@
             if (inputRatio > containerRatio) {
 
                 inputAdjust =
-                    videoCamera.width / system.controller.inputWidth;
+                    videoCamera.width /
+                    system.controller.inputWidth;
 
             } else {
 
                 inputAdjust =
-                    videoCamera.height / system.controller.inputHeight;
+                    videoCamera.height /
+                    system.controller.inputHeight;
 
             }
 
@@ -866,7 +1000,8 @@
             }
 
 
-            const fovAdjust = containerHeight / videoDisplayHeight;
+            const fovAdjust =
+                containerHeight / videoDisplayHeight;
 
             const fov =
                 2 * Math.atan(1 / projection[5] * fovAdjust) *
@@ -884,14 +1019,16 @@
 
             if (!cameraElement) return;
 
-            const threeCamera = cameraElement.getObject3D("camera");
+            const threeCamera =
+                cameraElement.getObject3D("camera");
 
             if (!threeCamera) return;
 
             threeCamera.fov = fov;
             threeCamera.near = near;
             threeCamera.far = far;
-            threeCamera.aspect = containerWidth / containerHeight;
+            threeCamera.aspect =
+                containerWidth / containerHeight;
 
             threeCamera.updateProjectionMatrix();
 
@@ -914,8 +1051,11 @@
                 scene.canvas.style.left = "0px";
                 scene.canvas.style.top = "0px";
 
-                scene.canvas.style.width = containerWidth + "px";
-                scene.canvas.style.height = containerHeight + "px";
+                scene.canvas.style.width =
+                    containerWidth + "px";
+
+                scene.canvas.style.height =
+                    containerHeight + "px";
 
                 scene.renderer.setSize(
                     containerWidth,
@@ -948,9 +1088,15 @@
                     resizeMindARSystem();
                 });
 
-                setTimeout(() => resizeMindARSystem(), 300);
+                setTimeout(
+                    () => resizeMindARSystem(),
+                    300
+                );
 
-                setTimeout(() => resizeMindARSystem(), 700);
+                setTimeout(
+                    () => resizeMindARSystem(),
+                    700
+                );
 
             }, 150);
 
@@ -974,9 +1120,15 @@
 
             }
 
-            window.addEventListener("resize", scheduleARResize);
+            window.addEventListener(
+                "resize",
+                scheduleARResize
+            );
 
-            window.addEventListener("orientationchange", scheduleARResize);
+            window.addEventListener(
+                "orientationchange",
+                scheduleARResize
+            );
 
             if (screen.orientation) {
 
