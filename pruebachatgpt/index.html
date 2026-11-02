@@ -189,6 +189,7 @@
 
         <a-assets>
 
+            <!-- VIDEO PRIMER MARCADOR -->
             <video
                 id="video1"
                 src="./video1.mp4"
@@ -199,6 +200,7 @@
                 crossorigin="anonymous"
             ></video>
 
+            <!-- VIDEO SEGUNDO MARCADOR -->
             <video
                 id="video2"
                 src="./video2.mp4"
@@ -323,7 +325,7 @@
 
 
         // =========================================
-        // ESPERAR A QUE A-FRAME Y MINDAR ESTÉN LISTOS
+        // PREPARACIÓN DE A-FRAME Y MINDAR
         // =========================================
 
         function checkARSystemReady() {
@@ -331,38 +333,40 @@
             const mindarSystem =
                 scene.systems["mindar-image-system"];
 
-            if (scene.hasLoaded && mindarSystem) {
+            if (
+                scene.hasLoaded &&
+                mindarSystem &&
+                typeof mindarSystem.start === "function"
+            ) {
 
                 arSystemReady = true;
 
                 startButton.disabled = false;
                 startButton.textContent = "INICIAR EXPERIENCIA";
 
-                console.log(
-                    "A-Frame y MindAR están preparados."
-                );
+                console.log("MindAR preparado.");
+
+                return true;
 
             }
+
+            return false;
 
         }
 
 
-        // Deshabilitar el botón mientras carga la escena.
+        // Estado inicial del botón.
         startButton.disabled = true;
         startButton.textContent = "PREPARANDO EXPERIENCIA...";
 
 
+        // Detectar cuando A-Frame termina de cargar.
+        scene.addEventListener("loaded", checkARSystemReady);
+
+
+        // Comprobar también si ya estaba cargada.
         if (scene.hasLoaded) {
-
             checkARSystemReady();
-
-        } else {
-
-            scene.addEventListener(
-                "loaded",
-                checkARSystemReady
-            );
-
         }
 
 
@@ -426,6 +430,7 @@
 
         async function playTargetVideo(video, plane) {
 
+            // Pausar cualquier otro video.
             if (activeVideo && activeVideo !== video) {
                 activeVideo.pause();
             }
@@ -446,12 +451,11 @@
             } catch (error) {
 
                 console.warn(
-                    "El navegador bloqueó la reproducción con audio:",
+                    "Safari bloqueó la reproducción con audio:",
                     error
                 );
 
-                // Reintentar en silencio si el navegador
-                // no permite reproducir con sonido.
+                // Reintentar en silencio.
                 video.muted = true;
 
                 try {
@@ -569,63 +573,6 @@
 
 
                 // ---------------------------------
-                // INTENTO DE DESBLOQUEO DE AUDIO
-                // ---------------------------------
-
-                // Se ejecuta antes de cualquier await,
-                // aprovechando el gesto del usuario.
-
-                const audioUnlockPromises = [video1, video2].map(video => {
-
-                    video.muted = false;
-
-                    try {
-
-                        const promise = video.play();
-
-                        if (
-                            promise &&
-                            typeof promise.then === "function"
-                        ) {
-
-                            return promise.then(() => {
-
-                                video.pause();
-                                video.currentTime = 0;
-
-                                return true;
-
-                            }).catch(error => {
-
-                                video.muted = true;
-
-                                console.warn(
-                                    "No se pudo desbloquear audio:",
-                                    error
-                                );
-
-                                return false;
-
-                            });
-
-                        }
-
-                        video.pause();
-
-                        return Promise.resolve(true);
-
-                    } catch (error) {
-
-                        video.muted = true;
-
-                        return Promise.resolve(false);
-
-                    }
-
-                });
-
-
-                // ---------------------------------
                 // PANTALLA COMPLETA
                 // ---------------------------------
 
@@ -675,6 +622,18 @@
 
 
                 // ---------------------------------
+                // ASEGURAR QUE LOS VIDEOS ESTÉN PAUSADOS
+                // ---------------------------------
+
+                video1.pause();
+                video2.pause();
+
+                // No reproducir ni desbloquear audio aquí.
+                // Los videos solo comenzarán al detectar
+                // su respectivo marcador.
+
+
+                // ---------------------------------
                 // INICIAR CÁMARA Y EXPERIENCIA AR
                 // ---------------------------------
 
@@ -690,23 +649,12 @@
                 splash.style.display = "none";
 
                 if (!isIPhoneSafari) {
-
                     fullscreenButton.style.display = "flex";
-
                 }
 
                 audioButton.style.display = "flex";
 
                 userMuted = false;
-
-                Promise.all(audioUnlockPromises).then(results => {
-
-                    console.log(
-                        "Resultado de desbloqueo de audio:",
-                        results
-                    );
-
-                });
 
                 updateAudioIcon();
                 updateScanMessage();
