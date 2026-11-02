@@ -232,16 +232,16 @@
 
     <!-- CONTROLES PARA GRABAR Y COMPARTIR LA EXPERIENCIA -->
     <div id="recording-controls" aria-live="polite">
-        <div id="recording-status"></div>
-        <div id="download-progress-wrap" role="status" aria-live="polite">
+        <div id="recording-status" style="display:none"></div>
+        <div id="download-progress-wrap" style="display:none !important" role="status" aria-live="polite">
             <span id="download-progress-title">Preparando archivo…</span>
             <div id="download-progress-track">
                 <div id="download-progress-bar"></div>
             </div>
             <span id="download-progress-label">0%</span>
         </div>
-        <button id="share-button" class="record-action" type="button">
-            <span aria-hidden="true">↓</span> Guardar video
+        <button id="share-button" class="record-action" type="button" style="display:none">
+            <span aria-hidden="true">↓</span> Descargar video
         </button>
         <button id="record-button" class="record-action" type="button">
             <span class="record-dot" aria-hidden="true"></span>
@@ -309,7 +309,7 @@
                 src="#video1"
                 width="1"
                 height="0.5625"
-                position="0 0 0.1"
+                position="0 0 0"
                 material="shader: flat; side: double"
             ></a-video>
 
@@ -324,7 +324,7 @@
                 src="#video2"
                 width="1"
                 height="0.5625"
-                position="0 0 0.1"
+                position="0 0 0"
                 material="shader: flat; side: double"
             ></a-video>
 
@@ -1234,9 +1234,9 @@
             }
 
             recordButton.disabled = true;
+            shareButton.style.display = "none";
+            recordingStatus.style.display = "none";
             recordButtonLabel.textContent = "Solicitando micrófono...";
-            recordingStatus.textContent = "El micrófono se utilizará para grabar tus comentarios.";
-            recordingStatus.style.display = "block";
 
             try {
                 // El permiso del micrófono se solicita únicamente cuando el usuario pulsa Grabar.
@@ -1318,26 +1318,19 @@
                     recordedBlob = new Blob(recordedChunks, { type: mimeType });
                     stopRecordingStreams();
 
-                    recordButton.style.display = "inline-flex";
                     recordButton.classList.remove("is-recording");
-                    recordButtonLabel.textContent = "Grabar otra vez";
-                    shareButton.style.display = "inline-flex";
-
-                    if (recordedBlob.size > 0) {
-                        recordingStatus.textContent = "Video listo. Puedes compartirlo o guardarlo.";
-                        recordingStatus.style.display = "block";
-                    } else {
-                        showRecordingError("No se pudo generar el video. Inténtalo de nuevo.");
-                    }
+                    recordButton.style.display = "none";
+                    recordButton.disabled = false;
+                    shareButton.style.display = recordedBlob.size > 0 ? "inline-flex" : "none";
+                    shareButton.disabled = false;
+                    recordingStatus.style.display = "none";
                 };
 
                 mediaRecorder.start(1000);
                 recordButton.disabled = false;
                 recordButton.classList.add("is-recording");
                 recordButtonLabel.textContent = "Detener grabación";
-                recordingStatus.textContent = "Grabando en formato " +
-                    (recordingOrientation === "landscape" ? "horizontal 16:9" : "vertical 9:16") +
-                    ", con audio de los videos AR y micrófono. Evita girar el teléfono durante la grabación.";
+                recordingStatus.style.display = "none";
                 downloadProgressWrap.style.display = "none";
 
             } catch (error) {
@@ -1345,13 +1338,7 @@
                 stopRecordingStreams();
                 recordButton.disabled = false;
                 recordButtonLabel.textContent = "Grabar experiencia";
-                recordingStatus.style.display = "block";
-
-                if (error && (error.name === "NotAllowedError" || error.name === "PermissionDeniedError")) {
-                    recordingStatus.textContent = "No se concedió permiso para usar el micrófono. Actívalo en los ajustes del navegador para grabar tus comentarios.";
-                } else {
-                    recordingStatus.textContent = "No se pudo iniciar la grabación en este navegador. Prueba con Safari o Chrome actualizado.";
-                }
+                recordingStatus.style.display = "none";
             }
         }
 
@@ -1405,8 +1392,7 @@
                 }
                 await writable.close();
                 updateDownloadProgress(100, "¡Video guardado correctamente!");
-                recordingStatus.textContent = "El archivo se guardó en la ubicación que seleccionaste.";
-                recordingStatus.style.display = "block";
+                recordingStatus.style.display = "none";
             } catch (error) {
                 try { await writable.abort(); } catch (abortError) {}
                 throw error;
@@ -1441,11 +1427,16 @@
                             title: "Mi experiencia WebAR"
                         });
                         shareButton.style.display = "none";
-                        recordingStatus.textContent = "El menú de iPhone se abrió. Elige “Guardar en Archivos” para conservar el video.";
+                        recordedBlob = null;
+                        recordedChunks = [];
+                        recordButton.style.display = "inline-flex";
+                        recordButtonLabel.textContent = "Grabar experiencia";
+                        recordButton.classList.remove("is-recording");
+                        recordButton.disabled = false;
                     } else {
                         recordingStatus.textContent = "No se pudo abrir el menú para guardar. Si se muestra una vista previa, toca Compartir y elige “Guardar en Archivos”.";
                     }
-                    recordingStatus.style.display = "block";
+                    recordingStatus.style.display = "none";
                     return;
                 }
 
@@ -1455,11 +1446,18 @@
                     try {
                         await saveUsingFilePicker(videoFile);
                         shareButton.style.display = "none";
+                        recordedBlob = null;
+                        recordedChunks = [];
+                        recordButton.style.display = "inline-flex";
+                        recordButtonLabel.textContent = "Grabar experiencia";
+                        recordButton.classList.remove("is-recording");
+                        recordButton.disabled = false;
+                        recordingStatus.style.display = "none";
+                        downloadProgressWrap.style.display = "none";
                         return;
                     } catch (pickerError) {
                         if (pickerError && pickerError.name === "AbortError") {
-                            recordingStatus.textContent = "Guardado cancelado.";
-                            recordingStatus.style.display = "block";
+                            recordingStatus.style.display = "none";
                             downloadProgressWrap.style.display = "none";
                             return;
                         }
@@ -1477,15 +1475,18 @@
                 downloadLink.click();
                 downloadLink.remove();
                 shareButton.style.display = "none";
+                recordedBlob = null;
+                recordedChunks = [];
+                recordButton.style.display = "inline-flex";
+                recordButtonLabel.textContent = "Grabar experiencia";
+                recordButton.classList.remove("is-recording");
+                recordButton.disabled = false;
+                recordingStatus.style.display = "none";
+                downloadProgressWrap.style.display = "none";
                 setTimeout(() => URL.revokeObjectURL(objectUrl), 10 * 60 * 1000);
-
-                updateDownloadProgress(100, "Archivo preparado");
-                recordingStatus.textContent = "La descarga se envió al navegador. En este modo Android no informa el avance ni confirma cuándo termina; revisa la notificación de Descargas o la carpeta Descargas.";
-                recordingStatus.style.display = "block";
             } catch (error) {
                 console.error("No se pudo guardar el video:", error);
-                recordingStatus.textContent = "No se pudo guardar el video. Inténtalo de nuevo.";
-                recordingStatus.style.display = "block";
+                recordingStatus.style.display = "none";
                 downloadProgressWrap.style.display = "none";
             } finally {
                 shareButton.disabled = false;
