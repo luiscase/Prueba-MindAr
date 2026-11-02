@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -33,6 +34,7 @@
             height: 100% !important;
             overflow: hidden;
         }
+
 
         #scan-message {
             position: fixed;
@@ -88,6 +90,8 @@
             top: max(78px, calc(env(safe-area-inset-top) + 58px));
             right: max(20px, env(safe-area-inset-right));
         }
+
+
 
         /* CONTROLES DE GRABACIÓN Y COMPARTIR */
         #recording-controls {
@@ -149,6 +153,41 @@
             text-align: right;
         }
 
+        #download-progress-wrap {
+            display: none;
+            width: min(78vw, 280px);
+            padding: 9px 11px;
+            border-radius: 9px;
+            background: rgba(0,0,0,.78);
+            color: #fff;
+            font-size: 12px;
+            text-align: left;
+        }
+
+        #download-progress-track {
+            width: 100%;
+            height: 8px;
+            margin-top: 7px;
+            overflow: hidden;
+            border-radius: 10px;
+            background: rgba(255,255,255,.25);
+        }
+
+        #download-progress-bar {
+            width: 0%;
+            height: 100%;
+            border-radius: inherit;
+            background: #36c878;
+            transition: width .12s linear;
+        }
+
+        #download-progress-label {
+            display: block;
+            margin-top: 5px;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
         @keyframes recording-pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: .45; }
@@ -197,9 +236,19 @@
 
     </button>
 
+
+
+
     <!-- CONTROLES PARA GRABAR Y COMPARTIR LA EXPERIENCIA -->
     <div id="recording-controls" aria-live="polite">
         <div id="recording-status"></div>
+        <div id="download-progress-wrap" role="status" aria-live="polite">
+            <span id="download-progress-title">Preparando archivo…</span>
+            <div id="download-progress-track">
+                <div id="download-progress-bar"></div>
+            </div>
+            <span id="download-progress-label">0%</span>
+        </div>
         <button id="share-button" class="record-action" type="button">
             <span aria-hidden="true">↓</span> Guardar video
         </button>
@@ -252,12 +301,14 @@
 
         </a-assets>
 
+
         <!-- CÁMARA -->
         <a-camera
             id="camera"
             position="0 0 0"
             look-controls="enabled: false"
         ></a-camera>
+
 
         <!-- PRIMER MARCADOR -->
         <a-entity id="target1" mindar-image-target="targetIndex: 0">
@@ -272,6 +323,7 @@
             ></a-video>
 
         </a-entity>
+
 
         <!-- SEGUNDO MARCADOR -->
         <a-entity id="target2" mindar-image-target="targetIndex: 1">
@@ -288,6 +340,7 @@
         </a-entity>
 
     </a-scene>
+
 
     <script>
 
@@ -315,6 +368,7 @@
 
         const videoPlane1 = document.getElementById("video-plane-1");
         const videoPlane2 = document.getElementById("video-plane-2");
+
 
         // =========================================
         // DETECTAR DISPOSITIVO Y CONFIGURAR AUDIO
@@ -364,6 +418,7 @@
         let patchedSystem = null;
         let resizeTimeout = null;
 
+
         // =========================================
         // MENSAJE DE ESCANEO
         // =========================================
@@ -388,6 +443,7 @@
         updateScanMessage();
         updateAudioIcon();
 
+
         // =========================================
         // CONTROL DE AUDIO
         // =========================================
@@ -400,6 +456,7 @@
             soundOffIcon.style.display = muted ? "block" : "none";
 
         }
+
 
         function setVideoPlaybackMuted(video, muted) {
             const nodes = videoAudioNodes.get(video);
@@ -418,6 +475,7 @@
             }
         }
 
+
         function toggleAudio() {
 
             if (!activeVideo) return;
@@ -428,6 +486,7 @@
             updateAudioIcon();
 
         }
+
 
         async function prepareRecordingAudio() {
             const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -479,6 +538,7 @@
 
             return recordingAudioDestination.stream.getAudioTracks();
         }
+
 
         // =========================================
         // REPRODUCCIÓN DE VIDEOS
@@ -538,6 +598,7 @@
 
         }
 
+
         function pauseTargetVideo(video) {
 
             video.pause();
@@ -552,6 +613,7 @@
             updateAudioIcon();
 
         }
+
 
         // =========================================
         // EVENTOS DE LOS MARCADORES
@@ -569,6 +631,7 @@
 
         });
 
+
         target1.addEventListener("targetLost", () => {
 
             console.log("Primer marcador perdido");
@@ -580,6 +643,7 @@
             updateScanMessage();
 
         });
+
 
         target2.addEventListener("targetFound", () => {
 
@@ -593,6 +657,7 @@
 
         });
 
+
         target2.addEventListener("targetLost", () => {
 
             console.log("Segundo marcador perdido");
@@ -605,6 +670,7 @@
 
         });
 
+
         // =========================================
         // BOTÓN DE AUDIO
         // =========================================
@@ -616,6 +682,7 @@
             toggleAudio();
 
         });
+
 
         // =========================================
         // BOTÓN PANTALLA COMPLETA
@@ -644,6 +711,7 @@
             }
 
         }
+
 
         fullscreenButton.addEventListener("click", async (event) => {
 
@@ -678,6 +746,7 @@
 
         });
 
+
         document.addEventListener("fullscreenchange", () => {
 
             updateFullscreenIcon();
@@ -686,6 +755,7 @@
 
         });
 
+
         // =========================================
         // DETECCIÓN DE TOQUES SOBRE EL VIDEO
         // =========================================
@@ -693,6 +763,7 @@
         const raycaster = new THREE.Raycaster();
 
         const pointer = new THREE.Vector2();
+
 
         function handleVideoTouch(event) {
 
@@ -713,6 +784,7 @@
 
             pointer.y =
                 -((touch.clientY - rect.top) / rect.height) * 2 + 1;
+
 
             const cameraObject = document
                 .querySelector("#camera")
@@ -735,6 +807,7 @@
 
         }
 
+
         document.addEventListener("click", (event) => {
 
             if (
@@ -748,6 +821,7 @@
             handleVideoTouch(event);
 
         });
+
 
         // =========================================
         // RECALIBRACIÓN DE MINDAR
@@ -811,6 +885,7 @@
 
             }
 
+
             const projection =
                 system.controller.getProjectionMatrix();
 
@@ -834,6 +909,7 @@
 
             }
 
+
             let videoDisplayHeight;
 
             if (inputRatio > containerRatio) {
@@ -854,6 +930,7 @@
 
             }
 
+
             const fovAdjust =
                 containerHeight / videoDisplayHeight;
 
@@ -866,6 +943,7 @@
 
             const far =
                 projection[14] / (projection[10] + 1.0);
+
 
             const cameraElement =
                 container.getElementsByTagName("a-camera")[0];
@@ -885,6 +963,7 @@
 
             threeCamera.updateProjectionMatrix();
 
+
             videoCamera.style.position = "absolute";
 
             videoCamera.style.top =
@@ -895,6 +974,7 @@
 
             videoCamera.style.width = vw + "px";
             videoCamera.style.height = vh + "px";
+
 
             if (scene.canvas && scene.renderer) {
 
@@ -924,6 +1004,7 @@
 
         }
 
+
         function scheduleARResize() {
 
             if (!experienceStarted) return;
@@ -951,6 +1032,7 @@
             }, 150);
 
         }
+
 
         // =========================================
         // EVENTOS DE MINDAR
@@ -1009,11 +1091,15 @@
 
         });
 
+
         scene.addEventListener("arError", (event) => {
 
             console.error("Error de MindAR:", event);
 
         });
+
+
+
 
         // =========================================
         // GRABAR LA EXPERIENCIA + AUDIO DEL MICRÓFONO
@@ -1024,6 +1110,10 @@
         const recordButtonLabel = document.getElementById("record-button-label");
         const shareButton = document.getElementById("share-button");
         const recordingStatus = document.getElementById("recording-status");
+        const downloadProgressWrap = document.getElementById("download-progress-wrap");
+        const downloadProgressBar = document.getElementById("download-progress-bar");
+        const downloadProgressLabel = document.getElementById("download-progress-label");
+        const downloadProgressTitle = document.getElementById("download-progress-title");
 
         let mediaRecorder = null;
         let recordedChunks = [];
@@ -1033,6 +1123,9 @@
         let recordingCanvas = null;
         let recordingContext = null;
         let recordingAnimationId = null;
+        let recordingOutputWidth = 0;
+        let recordingOutputHeight = 0;
+        let recordingOrientation = "portrait";
 
         // Audio Web Audio: permite mezclar el sonido de los videos AR
         // y el micrófono dentro del archivo grabado.
@@ -1044,25 +1137,26 @@
         function drawRecordingFrame() {
             if (!recordingCanvas || !recordingContext) return;
 
-            const width = window.innerWidth;
-            const height = window.innerHeight;
-            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            if (!viewportWidth || !viewportHeight) return;
 
-            if (
-                recordingCanvas.width !== Math.round(width * dpr) ||
-                recordingCanvas.height !== Math.round(height * dpr)
-            ) {
-                recordingCanvas.width = Math.round(width * dpr);
-                recordingCanvas.height = Math.round(height * dpr);
-            }
+            // La orientación del archivo se fija al comenzar: vertical u horizontal.
+            // Si el usuario gira el teléfono durante la grabación, la imagen se ajusta
+            // dentro del formato elegido, sin cambiar las dimensiones del archivo.
+            const scale = Math.min(
+                recordingOutputWidth / viewportWidth,
+                recordingOutputHeight / viewportHeight
+            );
+            const offsetX = (recordingOutputWidth - viewportWidth * scale) / 2;
+            const offsetY = (recordingOutputHeight - viewportHeight * scale) / 2;
 
-            recordingContext.setTransform(dpr, 0, 0, dpr, 0, 0);
-            recordingContext.clearRect(0, 0, width, height);
+            recordingContext.setTransform(1, 0, 0, 1, 0, 0);
+            recordingContext.fillStyle = "#000";
+            recordingContext.fillRect(0, 0, recordingOutputWidth, recordingOutputHeight);
+            recordingContext.setTransform(scale, 0, 0, scale, offsetX, offsetY);
 
-            // MindAR mantiene la imagen de la cámara en un video separado,
-            // detrás del canvas transparente de A-Frame. Se componen ambos.
             const cameraVideo = patchedSystem && patchedSystem.video;
-
             if (cameraVideo && cameraVideo.readyState >= 2) {
                 const cameraRect = cameraVideo.getBoundingClientRect();
                 try {
@@ -1084,8 +1178,8 @@
                         scene.canvas,
                         0,
                         0,
-                        width,
-                        height
+                        viewportWidth,
+                        viewportHeight
                     );
                 } catch (error) {
                     console.warn("No se pudo componer el canvas AR:", error);
@@ -1094,6 +1188,7 @@
 
             recordingAnimationId = requestAnimationFrame(drawRecordingFrame);
         }
+
 
         function stopRecordingStreams() {
             if (recordingAnimationId) {
@@ -1124,10 +1219,12 @@
             }
         }
 
+
         function showRecordingError(message) {
             recordingStatus.textContent = message;
             recordingStatus.style.display = "block";
         }
+
 
         async function startExperienceRecording() {
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -1163,9 +1260,24 @@
                 // Mezclar audio de ambos videos AR + micrófono.
                 const videoAndMicAudioTracks = await prepareRecordingAudio();
 
+                // La orientación se elige automáticamente según la posición del teléfono
+                // al pulsar Grabar: vertical 9:16 u horizontal 16:9.
+                recordingOrientation = window.innerWidth >= window.innerHeight
+                    ? "landscape"
+                    : "portrait";
+
+                // Resolución fija para mantener un archivo con proporción consistente.
+                if (recordingOrientation === "landscape") {
+                    recordingOutputWidth = 1920;
+                    recordingOutputHeight = 1080;
+                } else {
+                    recordingOutputWidth = 1080;
+                    recordingOutputHeight = 1920;
+                }
+
                 recordingCanvas = document.createElement("canvas");
-                recordingCanvas.width = Math.round(window.innerWidth * Math.min(window.devicePixelRatio || 1, 2));
-                recordingCanvas.height = Math.round(window.innerHeight * Math.min(window.devicePixelRatio || 1, 2));
+                recordingCanvas.width = recordingOutputWidth;
+                recordingCanvas.height = recordingOutputHeight;
                 recordingContext = recordingCanvas.getContext("2d", { alpha: false });
 
                 if (!recordingContext) {
@@ -1232,7 +1344,10 @@
                 recordButton.disabled = false;
                 recordButton.classList.add("is-recording");
                 recordButtonLabel.textContent = "Detener grabación";
-                recordingStatus.textContent = "Grabando imagen, audio de los videos AR y micrófono…";
+                recordingStatus.textContent = "Grabando en formato " +
+                    (recordingOrientation === "landscape" ? "horizontal 16:9" : "vertical 9:16") +
+                    ", con audio de los videos AR y micrófono. Evita girar el teléfono durante la grabación.";
+                downloadProgressWrap.style.display = "none";
 
             } catch (error) {
                 console.error("No se pudo iniciar la grabación:", error);
@@ -1249,11 +1364,61 @@
             }
         }
 
+
         function stopExperienceRecording() {
             if (mediaRecorder && mediaRecorder.state !== "inactive") {
                 recordButton.disabled = true;
                 recordButtonLabel.textContent = "Procesando video...";
                 mediaRecorder.stop();
+            }
+        }
+
+
+        function updateDownloadProgress(percent, title) {
+            const value = Math.max(0, Math.min(100, Math.round(percent)));
+            downloadProgressWrap.style.display = "block";
+            downloadProgressTitle.textContent = title;
+            downloadProgressBar.style.width = value + "%";
+            downloadProgressLabel.textContent = value + "%";
+        }
+
+        async function saveUsingFilePicker(videoFile) {
+            // En navegadores compatibles, escribe el archivo por fragmentos
+            // y permite mostrar el progreso real del guardado.
+            const handle = await window.showSaveFilePicker({
+                suggestedName: videoFile.name,
+                types: [{
+                    description: "Video",
+                    accept: {
+                        [videoFile.type || "video/webm"]:
+                            [videoFile.name.endsWith(".mp4") ? ".mp4" : ".webm"]
+                    }
+                }]
+            });
+
+            const writable = await handle.createWritable();
+            const reader = videoFile.stream().getReader();
+            let written = 0;
+            const total = videoFile.size;
+
+            try {
+                while (true) {
+                    const result = await reader.read();
+                    if (result.done) break;
+                    await writable.write(result.value);
+                    written += result.value.byteLength;
+                    updateDownloadProgress(
+                        total ? (written / total) * 100 : 100,
+                        "Guardando video…"
+                    );
+                }
+                await writable.close();
+                updateDownloadProgress(100, "¡Video guardado correctamente!");
+                recordingStatus.textContent = "El archivo se guardó en la ubicación que seleccionaste.";
+                recordingStatus.style.display = "block";
+            } catch (error) {
+                try { await writable.abort(); } catch (abortError) {}
+                throw error;
             }
         }
 
@@ -1271,47 +1436,68 @@
             const fileType = recordedBlob.type || (isMp4 ? "video/mp4" : "video/webm");
             const videoFile = new File([recordedBlob], fileName, { type: fileType });
 
-            // En iPhone/iPad, la forma más fiable de guardar un Blob es
-            // abrir la hoja nativa de compartir archivos de iOS. Desde ahí
-            // el usuario puede elegir "Guardar en Archivos".
-            if (isIOS) {
-                if (typeof navigator.share === "function") {
-                    try {
-                        // No usar canShare() como filtro: en algunas versiones
-                        // de Safari devuelve false aunque share() sí pueda abrirse.
+            shareButton.disabled = true;
+            updateDownloadProgress(0, "Preparando archivo…");
+
+            try {
+                // iPhone/iPad: la hoja nativa de compartir no expone porcentaje
+                // ni confirma si el usuario eligió Guardar en Archivos.
+                if (isIOS) {
+                    downloadProgressWrap.style.display = "none";
+                    if (typeof navigator.share === "function") {
                         await navigator.share({
                             files: [videoFile],
                             title: "Mi experiencia WebAR"
                         });
-                        recordingStatus.textContent = "En el menú de iPhone, selecciona “Guardar en Archivos” para conservar el video.";
-                        recordingStatus.style.display = "block";
+                        recordingStatus.textContent = "El menú de iPhone se abrió. Elige “Guardar en Archivos” para conservar el video.";
+                    } else {
+                        recordingStatus.textContent = "No se pudo abrir el menú para guardar. Si se muestra una vista previa, toca Compartir y elige “Guardar en Archivos”.";
+                    }
+                    recordingStatus.style.display = "block";
+                    return;
+                }
+
+                // Cuando el navegador admite selector de guardado, podemos
+                // confirmar la escritura y mostrar porcentaje real.
+                if (typeof window.showSaveFilePicker === "function") {
+                    try {
+                        await saveUsingFilePicker(videoFile);
                         return;
-                    } catch (error) {
-                        if (error && error.name === "AbortError") return;
-                        console.warn("No se pudo abrir la hoja de compartir de iOS:", error);
+                    } catch (pickerError) {
+                        if (pickerError && pickerError.name === "AbortError") {
+                            recordingStatus.textContent = "Guardado cancelado.";
+                            recordingStatus.style.display = "block";
+                            downloadProgressWrap.style.display = "none";
+                            return;
+                        }
+                        console.warn("No se pudo usar el selector de archivos; se usará descarga normal:", pickerError);
                     }
                 }
 
-                // Evitamos el enlace download en iOS: Safari suele abrir una
-                // vista previa y no guardar el archivo en el dispositivo.
-                recordingStatus.textContent = "Safari no pudo abrir el menú para guardar el archivo. Abre esta experiencia directamente en Safari actualizado e inténtalo de nuevo. Si el video se abre en vista previa, toca el icono Compartir y elige “Guardar en Archivos”.";
+                // Descarga tradicional: el navegador no ofrece eventos para
+                // conocer el avance ni confirmar que el archivo terminó de guardarse.
+                const objectUrl = URL.createObjectURL(recordedBlob);
+                const downloadLink = document.createElement("a");
+                downloadLink.href = objectUrl;
+                downloadLink.download = fileName;
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                downloadLink.remove();
+                setTimeout(() => URL.revokeObjectURL(objectUrl), 10 * 60 * 1000);
+
+                updateDownloadProgress(100, "Archivo preparado");
+                recordingStatus.textContent = "La descarga se envió al navegador. En este modo Android no informa el avance ni confirma cuándo termina; revisa la notificación de Descargas o la carpeta Descargas.";
                 recordingStatus.style.display = "block";
-                return;
+            } catch (error) {
+                console.error("No se pudo guardar el video:", error);
+                recordingStatus.textContent = "No se pudo guardar el video. Inténtalo de nuevo.";
+                recordingStatus.style.display = "block";
+                downloadProgressWrap.style.display = "none";
+            } finally {
+                shareButton.disabled = false;
             }
-
-            // En Android y otros navegadores, mantener la descarga normal.
-            const objectUrl = URL.createObjectURL(recordedBlob);
-            const downloadLink = document.createElement("a");
-            downloadLink.href = objectUrl;
-            downloadLink.download = fileName;
-            document.body.appendChild(downloadLink);
-            downloadLink.click();
-            downloadLink.remove();
-            setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
-
-            recordingStatus.textContent = "Se inició la descarga del video.";
-            recordingStatus.style.display = "block";
         }
+
 
         recordButton.addEventListener("click", () => {
             if (mediaRecorder && mediaRecorder.state === "recording") {
@@ -1322,6 +1508,7 @@
         });
 
         shareButton.addEventListener("click", shareRecordedVideo);
+
 
         // =========================================
         // VISIBILIDAD DE LA PÁGINA
